@@ -66,7 +66,7 @@ gdp_df = get_gdp_data()
 '''
 #  Examining the Relationship between Brain Volume and Dementia Diagnoses'
 
-look ar mri scans!!!!!
+An analysis of data provided by the OASIS project.
 '''
 
 # Add some spacing
@@ -147,3 +147,14 @@ for i, country in enumerate(selected_countries):
             delta=growth,
             delta_color=delta_color
         )
+st.header('Our project', divider='gray')
+st.write("Coroline's explination of OASIS and what we are analyzing here.")
+st.header("background", divider='gray')
+st.write("If needed and/or already written, background info will go here.")
+st.header("Code", divider='gray')
+st.write("Code nicely displayed below.")
+st.header("Results", divider='gray')
+st.header("Conclusions", divider='gray')
+st.write("Final conclusions go here.")
+st.header("References", divider='gray')
+st.write("All references go here.")
