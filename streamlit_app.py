@@ -147,6 +147,8 @@ for i, country in enumerate(selected_countries):
             delta=growth,
             delta_color=delta_color
         )
+st.title("Examining the Relationship between Brain Volume and Dementia Diagnoses'")
+st.write("An analysis of data provided by the OASIS project.")
 st.header('Our project', divider='blue')
 st.write("Coroline's explination of OASIS and what we are analyzing here.")
 st.header("Background", divider='blue')
