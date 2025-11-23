@@ -63,16 +63,9 @@ gdp_df = get_gdp_data()
 # Draw the actual page
 
 # Set the title that appears at the top of the page.
-'''
-#  Examining the Relationship between Brain Volume and Dementia Diagnoses'
+st.title('Examining the Relationship between Brain Volume and Dementia Diagnoses 😺')
 
-An analysis of data provided by the OASIS project.
-'''
-
-# Add some spacing
-''
-''
-
+# Slider for years
 min_value = gdp_df['Year'].min()
 max_value = gdp_df['Year'].max()
 
@@ -82,19 +75,19 @@ from_year, to_year = st.slider(
     max_value=max_value,
     value=[min_value, max_value])
 
-countries = gdp_df['Country Code'].unique()
+# Make a stable list of available country codes
+countries = list(gdp_df['Country Code'].unique())
 
-if not len(countries):
-    st.warning("Select at least one country")
+if not countries:
+    st.warning("No countries available in the dataset")
+
+# Ensure the multiselect default values exist in the available countries
+default_countries = [c for c in ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'] if c in countries]
 
 selected_countries = st.multiselect(
     'Which countries would you like to view?',
     countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
+    default=default_countries)
 
 # Filter the data
 filtered_gdp_df = gdp_df[
@@ -105,8 +98,6 @@ filtered_gdp_df = gdp_df[
 
 st.header('GDP over time', divider='gray')
 
-''
-
 st.line_chart(
     filtered_gdp_df,
     x='Year',
@@ -114,16 +105,10 @@ st.line_chart(
     color='Country Code',
 )
 
-''
-''
-
-
 first_year = gdp_df[gdp_df['Year'] == from_year]
 last_year = gdp_df[gdp_df['Year'] == to_year]
 
 st.header(f'GDP in {to_year}', divider='gray')
-
-''
 
 cols = st.columns(4)
 
@@ -131,14 +116,24 @@ for i, country in enumerate(selected_countries):
     col = cols[i % len(cols)]
 
     with col:
-        first_gdp = first_year[first_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[last_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
+        first_vals = first_year[first_year['Country Code'] == country]['GDP']
+        last_vals = last_year[last_year['Country Code'] == country]['GDP']
 
-        if math.isnan(first_gdp):
+        if first_vals.empty or last_vals.empty:
+            first_gdp = float('nan')
+            last_gdp = float('nan')
+        else:
+            first_gdp = first_vals.iat[0] / 1_000_000_000
+            last_gdp = last_vals.iat[0] / 1_000_000_000
+
+        if math.isnan(first_gdp) or math.isnan(last_gdp):
             growth = 'n/a'
             delta_color = 'off'
         else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
+            if first_gdp == 0:
+                growth = '∞'
+            else:
+                growth = f'{last_gdp / first_gdp:,.2f}x'
             delta_color = 'normal'
 
         st.metric(
@@ -147,16 +142,17 @@ for i, country in enumerate(selected_countries):
             delta=growth,
             delta_color=delta_color
         )
-st.title("Examining the Relationship between Brain Volume and Dementia Diagnoses'")
+
+# Additional project documentation sections
 st.write("An analysis of data provided by the OASIS project.")
 st.header('Our project', divider='blue')
-st.write("Coroline's explination of OASIS and what we are analyzing here.")
-st.header("Background", divider='blue')
+st.write("Coroline's explanation of OASIS and what we are analyzing here.")
+st.header('Background', divider='blue')
 st.write("If needed and/or already written, background info will go here.")
-st.header("Code", divider='blue')
+st.header('Code', divider='blue')
 st.write("Code nicely displayed below.")
-st.header("Results", divider='blue')
-st.header("Conclusions", divider='blue')
+st.header('Results', divider='blue')
+st.header('Conclusions', divider='blue')
 st.write("Final conclusions go here.")
-st.header("References", divider='blue')
+st.header('References', divider='blue')
 st.write("All references go here.")
