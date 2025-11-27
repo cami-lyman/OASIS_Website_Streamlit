@@ -156,3 +156,33 @@ st.header('Conclusions', divider='blue')
 st.write("Final conclusions go here.")
 st.header('References', divider='blue')
 st.write("All references go here.")
+
+import streamlit as st
+import os
+from PIL import Image
+
+st.header("MRI Slice Viewer")
+
+SLICE_DIR = "oasis/mri_files"
+slice_files = sorted([f for f in os.listdir(SLICE_DIR) if f.endswith(".png")])
+
+if "slice_index" not in st.session_state:
+    st.session_state.slice_index = 0
+
+# Continuous update slider
+idx = st.slider(
+    "Slice Number",
+    0,
+    len(slice_files)-1,
+    value=st.session_state.slice_index,
+    key="live_slider"
+)
+
+# Update session_state whenever slider moves
+st.session_state.slice_index = idx
+
+# Show image corresponding to current slider value
+img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
+image = Image.open(img_path)
+
+st.image(image, caption=f"Slice {st.session_state.slice_index}", use_column_width=True)
