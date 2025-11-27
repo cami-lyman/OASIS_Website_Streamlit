@@ -166,29 +166,29 @@ st.title("MRI Slice Viewer")
 
 SLICE_DIR = "oasis/mri_files"
 
-# Reverse slice order so images are top → bottom
+# Reverse slice order
 slice_files = sorted(
     [f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")]
 )[::-1]
 
-# --- Initialize session state ---
+# Initialize state
 if "slice_index" not in st.session_state:
     st.session_state.slice_index = 0
 if "play" not in st.session_state:
     st.session_state.play = False
 
-# --- CALLBACK for slider ---
+# --- CALLBACK FOR SLIDER ---
 def update_slice():
     st.session_state.slice_index = st.session_state.slice_slider
 
-# --- REAL-TIME SLIDER (via on_change callback) ---
+# --- REAL-TIME SLIDER ---
 st.slider(
     "Slice",
     0,
     len(slice_files) - 1,
     value=st.session_state.slice_index,
     key="slice_slider",
-    on_change=update_slice,
+    on_change=update_slice
 )
 
 # --- IMAGE PLACEHOLDER ---
@@ -200,10 +200,10 @@ img = Image.open(img_path)
 image_placeholder.image(
     img,
     caption=f"Slice {st.session_state.slice_index}",
-    use_container_width=True
+    width="stretch"
 )
 
-# --- PLAY / PAUSE BUTTONS ---
+# --- PLAY/PAUSE BUTTONS ---
 col1, col2 = st.columns(2)
 if col1.button("▶ Play"):
     st.session_state.play = True
@@ -217,17 +217,21 @@ if st.session_state.play:
             break
 
         st.session_state.slice_index = i
-        st.session_state.slice_slider = i   # updates slider properly
 
+        # update image
         img_path = os.path.join(SLICE_DIR, slice_files[i])
         img = Image.open(img_path)
         image_placeholder.image(
             img,
             caption=f"Slice {i}",
-            use_container_width=True
+            width="stretch"
         )
 
+        # DO NOT WRITE TO st.session_state.slice_slider EVER
+        # The slider will update on rerun because its value = slice_index
+
         time.sleep(0.08)
+
 
 
 
