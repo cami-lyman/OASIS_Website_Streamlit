@@ -173,15 +173,17 @@ if "slice_index" not in st.session_state:
 if "play" not in st.session_state:
     st.session_state.play = False
 
-# --- SLIDER (updates continuously) ---
-idx = st.slider(
+# --- SLIDER ---
+slider_value = st.slider(
     "Slice",
     0,
-    len(slice_files)-1,
+    len(slice_files) - 1,
     value=st.session_state.slice_index,
-    key="slider"
+    key="slice_slider"
 )
-st.session_state.slice_index = idx
+
+# Sync slider → index
+st.session_state.slice_index = slider_value
 
 # --- DISPLAY IMAGE ---
 img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
@@ -196,13 +198,16 @@ if col1.button("▶ Play"):
 if col2.button("⏸ Pause"):
     st.session_state.play = False
 
-# --- AUTOPLAY LOOP ---
+# --- AUTOPLAY LOOP (no rerun needed) ---
 if st.session_state.play:
-    for i in range(st.session_state.slice_index, len(slice_files)):
-        if not st.session_state.play:
-            break  # stop if user clicked pause
-        st.session_state.slice_index = i
-        st.session_state.slider = i  # update UI slider
-        time.sleep(0.05)            # playback speed
-        st.rerun()
+    st.session_state.slice_index += 1
+
+    if st.session_state.slice_index >= len(slice_files):
+        st.session_state.slice_index = len(slice_files) - 1
+        st.session_state.play = False
+
+    time.sleep(0.05)
+
+    # This forces UI to refresh even without st.rerun()
+    st.session_state._force_refresh = time.time()
 
