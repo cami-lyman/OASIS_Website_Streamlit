@@ -156,33 +156,3 @@ st.header('Conclusions', divider='blue')
 st.write("Final conclusions go here.")
 st.header('References', divider='blue')
 st.write("All references go here.")
-
-import os
-from PIL import Image
-import streamlit as st
-
-st.header("MRI Slice Viewer")
-
-SLICE_DIR = "oasis/mri_files"
-
-# Gather all slices
-slice_files = sorted(
-    [f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")]
-)
-
-if not slice_files:
-    st.error("No MRI slice images found in oasis/mri_files/. Please upload slices.")
-else:
-    # Slider for slice index
-    idx = st.slider(
-        "Slice Number",
-        min_value=0,
-        max_value=len(slice_files) - 1,
-        value=0
-    )
-
-    # Load and show the image
-    img_path = os.path.join(SLICE_DIR, slice_files[idx])
-    image = Image.open(img_path)
-
-    st.image(image, caption=f"Slice {idx}", use_column_width=True)
