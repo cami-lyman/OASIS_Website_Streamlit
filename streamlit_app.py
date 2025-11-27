@@ -167,7 +167,7 @@ st.title("MRI Slice Viewer")
 SLICE_DIR = "oasis/mri_files"
 slice_files = sorted([f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")])
 
-# Initialize state
+# --- Initialize session state ---
 if "slice_index" not in st.session_state:
     st.session_state.slice_index = 0
 if "play" not in st.session_state:
@@ -185,29 +185,41 @@ slider_value = st.slider(
 # Sync slider → index
 st.session_state.slice_index = slider_value
 
-# --- DISPLAY IMAGE ---
+# --- IMAGE PLACEHOLDER (for redraw during animation) ---
+image_placeholder = st.empty()
+
+# Display initial image
 img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
 image = Image.open(img_path)
-st.image(image, caption=f"Slice {st.session_state.slice_index}", use_container_width=True)
+image_placeholder.image(
+    image,
+    caption=f"Slice {st.session_state.slice_index}",
+    use_container_width=True
+)
 
-# --- PLAY/STOP BUTTONS ---
+# --- PLAY/PAUSE BUTTONS ---
 col1, col2 = st.columns(2)
-
 if col1.button("▶ Play"):
     st.session_state.play = True
 if col2.button("⏸ Pause"):
     st.session_state.play = False
 
-# --- AUTOPLAY LOOP (no rerun needed) ---
+# --- AUTOPLAY LOOP (works in ALL Streamlit versions) ---
 if st.session_state.play:
-    st.session_state.slice_index += 1
+    for i in range(st.session_state.slice_index, len(slice_files)):
+        if not st.session_state.play:
+            break
 
-    if st.session_state.slice_index >= len(slice_files):
-        st.session_state.slice_index = len(slice_files) - 1
-        st.session_state.play = False
+        st.session_state.slice_index = i
 
-    time.sleep(0.05)
+        # Display updated image inside the placeholder
+        img_path = os.path.join(SLICE_DIR, slice_files[i])
+        img = Image.open(img_path)
+        image_placeholder.image(
+            img,
+            caption=f"Slice {i}",
+            use_container_width=True
+        )
 
-    # This forces UI to refresh even without st.rerun()
-    st.session_state._force_refresh = time.time()
-
+        # Small delay for animation speed
+        time.sleep(0.05)
