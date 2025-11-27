@@ -166,7 +166,7 @@ st.title("MRI Slice Viewer")
 
 SLICE_DIR = "oasis/mri_files"
 
-# Reverse the order so images go top → bottom
+# Reverse the slice order (top → bottom)
 slice_files = sorted([f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")])[::-1]
 
 # --- Initialize session state ---
@@ -175,14 +175,26 @@ if "slice_index" not in st.session_state:
 if "play" not in st.session_state:
     st.session_state.play = False
 
+# --- SLIDER ---
+slider_value = st.slider(
+    "Slice",
+    0,
+    len(slice_files) - 1,
+    value=st.session_state.slice_index,
+    key="slice_slider"
+)
+
+# Sync slider → current frame
+st.session_state.slice_index = slider_value
+
 # --- IMAGE PLACEHOLDER ---
 image_placeholder = st.empty()
 
-# --- DISPLAY INITIAL FRAME ---
-initial_img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
-initial_img = Image.open(initial_img_path)
+# Display the current image
+img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
+image = Image.open(img_path)
 image_placeholder.image(
-    initial_img,
+    image,
     caption=f"Slice {st.session_state.slice_index}",
     use_container_width=True
 )
@@ -202,14 +214,18 @@ if st.session_state.play:
 
         st.session_state.slice_index = i
 
+        # Update image inside placeholder
         img_path = os.path.join(SLICE_DIR, slice_files[i])
         img = Image.open(img_path)
-
         image_placeholder.image(
             img,
             caption=f"Slice {i}",
             use_container_width=True
         )
 
-        time.sleep(0.08)  # slower playback speed
+        # Update slider display automatically
+        st.session_state.slice_slider = i
+
+        # Slow playback speed
+        time.sleep(0.08)
 
