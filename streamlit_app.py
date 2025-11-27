@@ -160,37 +160,49 @@ st.write("All references go here.")
 import streamlit as st
 import os
 from PIL import Image
+import time
 
-st.header("MRI Slice Viewer")
+st.title("MRI Slice Viewer")
 
 SLICE_DIR = "oasis/mri_files"
 slice_files = sorted([f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")])
 
-# Initialize state for continuous slider
+# Initialize state
 if "slice_index" not in st.session_state:
     st.session_state.slice_index = 0
+if "play" not in st.session_state:
+    st.session_state.play = False
 
-# Continuous-update slider
+# --- SLIDER (updates continuously) ---
 idx = st.slider(
-    "Slice Number",
+    "Slice",
     0,
-    len(slice_files) - 1,
+    len(slice_files)-1,
     value=st.session_state.slice_index,
-    key="live_slider"
+    key="slider"
 )
-
-# Update the stored index as slider moves
 st.session_state.slice_index = idx
 
-# Display the current slice
+# --- DISPLAY IMAGE ---
 img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
 image = Image.open(img_path)
-st.image(image, caption=f"Slice {st.session_state.slice_index}", use_column_width=True)
+st.image(image, caption=f"Slice {st.session_state.slice_index}", use_container_width=True)
 
-# OPTIONAL — Add autoplay animation
-st.subheader("Autoplay (Optional)")
+# --- PLAY/STOP BUTTONS ---
+col1, col2 = st.columns(2)
 
-if st.button("Play Through Slices"):
-    for i in range(len(slice_files)):
+if col1.button("▶ Play"):
+    st.session_state.play = True
+if col2.button("⏸ Pause"):
+    st.session_state.play = False
+
+# --- AUTOPLAY LOOP ---
+if st.session_state.play:
+    for i in range(st.session_state.slice_index, len(slice_files)):
+        if not st.session_state.play:
+            break  # stop if user clicked pause
         st.session_state.slice_index = i
+        st.session_state.slider = i  # update UI slider
+        time.sleep(0.05)            # playback speed
         st.rerun()
+
