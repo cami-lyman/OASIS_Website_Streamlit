@@ -166,8 +166,10 @@ st.title("MRI Slice Viewer")
 
 SLICE_DIR = "oasis/mri_files"
 
-# Reverse the slice order (top → bottom)
-slice_files = sorted([f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")])[::-1]
+# Reverse slice order so images go top → bottom
+slice_files = sorted(
+    [f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")]
+)[::-1]
 
 # --- Initialize session state ---
 if "slice_index" not in st.session_state:
@@ -175,32 +177,30 @@ if "slice_index" not in st.session_state:
 if "play" not in st.session_state:
     st.session_state.play = False
 
-# --- SLIDER ---
-# The slider reads slice_index but we never modify its key directly.
-slider_value = st.slider(
+# --- SELECT SLIDER (updates continuously during drag) ---
+slider_value = st.select_slider(
     "Slice",
-    0,
-    len(slice_files) - 1,
+    options=list(range(len(slice_files))),
     value=st.session_state.slice_index,
     key="slice_slider"
 )
 
-# Sync slider → index
+# Sync slider → current index
 st.session_state.slice_index = slider_value
 
 # --- IMAGE PLACEHOLDER ---
 image_placeholder = st.empty()
 
 # Display the current image
-img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
-image = Image.open(img_path)
+current_img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
+current_img = Image.open(current_img_path)
 image_placeholder.image(
-    image,
+    current_img,
     caption=f"Slice {st.session_state.slice_index}",
     use_container_width=True
 )
 
-# --- PLAY/PAUSE BUTTONS ---
+# --- PLAY / PAUSE BUTTONS ---
 col1, col2 = st.columns(2)
 if col1.button("▶ Play"):
     st.session_state.play = True
@@ -213,10 +213,9 @@ if st.session_state.play:
         if not st.session_state.play:
             break
 
-        # Update slice index
         st.session_state.slice_index = i
 
-        # Update image
+        # Display updated image
         img_path = os.path.join(SLICE_DIR, slice_files[i])
         img = Image.open(img_path)
         image_placeholder.image(
@@ -228,7 +227,5 @@ if st.session_state.play:
         # Slow playback speed
         time.sleep(0.08)
 
-        # IMPORTANT:
-        # No attempt to modify st.session_state.slice_slider — that will crash.
 
 
