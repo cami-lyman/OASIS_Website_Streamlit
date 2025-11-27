@@ -176,6 +176,7 @@ if "play" not in st.session_state:
     st.session_state.play = False
 
 # --- SLIDER ---
+# The slider reads slice_index but we never modify its key directly.
 slider_value = st.slider(
     "Slice",
     0,
@@ -184,7 +185,7 @@ slider_value = st.slider(
     key="slice_slider"
 )
 
-# Sync slider → current frame
+# Sync slider → index
 st.session_state.slice_index = slider_value
 
 # --- IMAGE PLACEHOLDER ---
@@ -212,9 +213,10 @@ if st.session_state.play:
         if not st.session_state.play:
             break
 
+        # Update slice index
         st.session_state.slice_index = i
 
-        # Update image inside placeholder
+        # Update image
         img_path = os.path.join(SLICE_DIR, slice_files[i])
         img = Image.open(img_path)
         image_placeholder.image(
@@ -223,9 +225,10 @@ if st.session_state.play:
             use_container_width=True
         )
 
-        # Update slider display automatically
-        st.session_state.slice_slider = i
-
         # Slow playback speed
         time.sleep(0.08)
+
+        # IMPORTANT:
+        # No attempt to modify st.session_state.slice_slider — that will crash.
+
 
