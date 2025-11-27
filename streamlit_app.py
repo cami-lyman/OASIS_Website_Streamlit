@@ -164,25 +164,33 @@ from PIL import Image
 st.header("MRI Slice Viewer")
 
 SLICE_DIR = "oasis/mri_files"
-slice_files = sorted([f for f in os.listdir(SLICE_DIR) if f.endswith(".png")])
+slice_files = sorted([f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")])
 
+# Initialize state for continuous slider
 if "slice_index" not in st.session_state:
     st.session_state.slice_index = 0
 
-# Continuous update slider
+# Continuous-update slider
 idx = st.slider(
     "Slice Number",
     0,
-    len(slice_files)-1,
+    len(slice_files) - 1,
     value=st.session_state.slice_index,
     key="live_slider"
 )
 
-# Update session_state whenever slider moves
+# Update the stored index as slider moves
 st.session_state.slice_index = idx
 
-# Show image corresponding to current slider value
+# Display the current slice
 img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
 image = Image.open(img_path)
-
 st.image(image, caption=f"Slice {st.session_state.slice_index}", use_column_width=True)
+
+# OPTIONAL — Add autoplay animation
+st.subheader("Autoplay (Optional)")
+
+if st.button("Play Through Slices"):
+    for i in range(len(slice_files)):
+        st.session_state.slice_index = i
+        st.experimental_rerun()
