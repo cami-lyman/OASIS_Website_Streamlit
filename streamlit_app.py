@@ -165,7 +165,9 @@ import time
 st.title("MRI Slice Viewer")
 
 SLICE_DIR = "oasis/mri_files"
-slice_files = sorted([f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")])
+
+# Reverse the order so images go top → bottom
+slice_files = sorted([f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")])[::-1]
 
 # --- Initialize session state ---
 if "slice_index" not in st.session_state:
@@ -173,26 +175,14 @@ if "slice_index" not in st.session_state:
 if "play" not in st.session_state:
     st.session_state.play = False
 
-# --- SLIDER ---
-slider_value = st.slider(
-    "Slice",
-    0,
-    len(slice_files) - 1,
-    value=st.session_state.slice_index,
-    key="slice_slider"
-)
-
-# Sync slider → index
-st.session_state.slice_index = slider_value
-
-# --- IMAGE PLACEHOLDER (for redraw during animation) ---
+# --- IMAGE PLACEHOLDER ---
 image_placeholder = st.empty()
 
-# Display initial image
-img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
-image = Image.open(img_path)
+# --- DISPLAY INITIAL FRAME ---
+initial_img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
+initial_img = Image.open(initial_img_path)
 image_placeholder.image(
-    image,
+    initial_img,
     caption=f"Slice {st.session_state.slice_index}",
     use_container_width=True
 )
@@ -204,7 +194,7 @@ if col1.button("▶ Play"):
 if col2.button("⏸ Pause"):
     st.session_state.play = False
 
-# --- AUTOPLAY LOOP (works in ALL Streamlit versions) ---
+# --- AUTOPLAY LOOP ---
 if st.session_state.play:
     for i in range(st.session_state.slice_index, len(slice_files)):
         if not st.session_state.play:
@@ -212,14 +202,14 @@ if st.session_state.play:
 
         st.session_state.slice_index = i
 
-        # Display updated image inside the placeholder
         img_path = os.path.join(SLICE_DIR, slice_files[i])
         img = Image.open(img_path)
+
         image_placeholder.image(
             img,
             caption=f"Slice {i}",
             use_container_width=True
         )
 
-        # Small delay for animation speed
-        time.sleep(0.05)
+        time.sleep(0.15)  # slower playback speed
+
