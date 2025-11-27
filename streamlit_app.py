@@ -193,4 +193,4 @@ st.subheader("Autoplay (Optional)")
 if st.button("Play Through Slices"):
     for i in range(len(slice_files)):
         st.session_state.slice_index = i
-        st.experimental_rerun()
+        st.rerun()
