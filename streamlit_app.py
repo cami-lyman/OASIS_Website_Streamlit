@@ -211,5 +211,5 @@ if st.session_state.play:
             use_container_width=True
         )
 
-        time.sleep(0.15)  # slower playback speed
+        time.sleep(0.10)  # slower playback speed
 
