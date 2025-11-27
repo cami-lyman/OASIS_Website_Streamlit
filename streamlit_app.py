@@ -166,7 +166,7 @@ st.title("MRI Slice Viewer")
 
 SLICE_DIR = "oasis/mri_files"
 
-# Reverse slice order so images go top → bottom
+# Reverse slice order so images are top → bottom
 slice_files = sorted(
     [f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")]
 )[::-1]
@@ -177,25 +177,28 @@ if "slice_index" not in st.session_state:
 if "play" not in st.session_state:
     st.session_state.play = False
 
-# --- SELECT SLIDER (updates continuously during drag) ---
-slider_value = st.select_slider(
-    "Slice",
-    options=list(range(len(slice_files))),
-    value=st.session_state.slice_index,
-    key="slice_slider"
-)
+# --- CALLBACK for slider ---
+def update_slice():
+    st.session_state.slice_index = st.session_state.slice_slider
 
-# Sync slider → current index
-st.session_state.slice_index = slider_value
+# --- REAL-TIME SLIDER (via on_change callback) ---
+st.slider(
+    "Slice",
+    0,
+    len(slice_files) - 1,
+    value=st.session_state.slice_index,
+    key="slice_slider",
+    on_change=update_slice,
+)
 
 # --- IMAGE PLACEHOLDER ---
 image_placeholder = st.empty()
 
-# Display the current image
-current_img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
-current_img = Image.open(current_img_path)
+# Display current slice
+img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
+img = Image.open(img_path)
 image_placeholder.image(
-    current_img,
+    img,
     caption=f"Slice {st.session_state.slice_index}",
     use_container_width=True
 )
@@ -214,8 +217,8 @@ if st.session_state.play:
             break
 
         st.session_state.slice_index = i
+        st.session_state.slice_slider = i   # updates slider properly
 
-        # Display updated image
         img_path = os.path.join(SLICE_DIR, slice_files[i])
         img = Image.open(img_path)
         image_placeholder.image(
@@ -224,8 +227,8 @@ if st.session_state.play:
             use_container_width=True
         )
 
-        # Slow playback speed
         time.sleep(0.08)
+
 
 
 
