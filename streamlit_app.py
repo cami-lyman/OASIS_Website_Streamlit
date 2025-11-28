@@ -162,7 +162,9 @@ import os
 from PIL import Image
 import time
 
-st.title("MRI Slice Viewer")
+# ---------------- MRI VIEWER ----------------
+
+st.header("MRI Slice Viewer")
 
 SLICE_DIR = "oasis/mri_files"
 
@@ -178,20 +180,20 @@ if "play" not in st.session_state:
     st.session_state.play = False
 
 
-# --- CALLBACK (forces real-time slider updates) ---
+# --- CALLBACK for slider (must force rerun for real-time updating) ---
 def update_slice():
     st.session_state.slice_index = st.session_state.slice_slider
-    st.rerun()   # ⭐ REQUIRED FOR STREAMLIT 1.51 REALTIME UPDATES
+    st.rerun()
 
 
-# --- REAL-TIME SLIDER USING CALLBACK ---
+# --- REAL-TIME SLIDER ---
 st.slider(
     "Slice",
     min_value=0,
     max_value=len(slice_files) - 1,
     value=st.session_state.slice_index,
     key="slice_slider",
-    on_change=update_slice,
+    on_change=update_slice
 )
 
 
@@ -199,10 +201,10 @@ st.slider(
 image_placeholder = st.empty()
 
 # Display selected slice
-current_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
-current_img = Image.open(current_path)
+img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
+img = Image.open(img_path)
 image_placeholder.image(
-    current_img,
+    img,
     caption=f"Slice {st.session_state.slice_index}",
     width="stretch"
 )
@@ -210,30 +212,43 @@ image_placeholder.image(
 
 # --- PLAY / PAUSE ---
 col1, col2 = st.columns(2)
+
 if col1.button("▶ Play"):
     st.session_state.play = True
+    st.rerun()
+
 if col2.button("⏸ Pause"):
     st.session_state.play = False
+    st.rerun()
 
 
 # --- AUTOPLAY LOOP ---
 if st.session_state.play:
-    for i in range(st.session_state.slice_index, len(slice_files)):
-        if not st.session_state.play:
-            break
+    i = st.session_state.slice_index + 1
 
-        st.session_state.slice_index = i
+    # Stop when we reach the end
+    if i >= len(slice_files):
+        st.session_state.play = False
+        st.rerun()
 
-        img_path = os.path.join(SLICE_DIR, slice_files[i])
-        img = Image.open(img_path)
-        image_placeholder.image(
-            img,
-            caption=f"Slice {i}",
-            width="stretch"
-        )
+    # Update index
+    st.session_state.slice_index = i
 
-        time.sleep(0.08)
-        st.rerun()    # ⭐ REQUIRED FOR FRAME-BY-FRAME ANIMATION
+    # Draw next frame
+    img_path = os.path.join(SLICE_DIR, slice_files[i])
+    img = Image.open(img_path)
+    image_placeholder.image(
+        img,
+        caption=f"Slice {i}",
+        width="stretch"
+    )
+
+    # Control playback speed
+    time.sleep(0.10)
+
+    # Show the next frame
+    st.rerun()
+
 
 
 
