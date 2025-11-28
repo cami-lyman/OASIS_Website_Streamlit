@@ -162,13 +162,11 @@ import os
 from PIL import Image
 import time
 
-# ---------------- MRI VIEWER ----------------
-
-st.header("MRI Slice Viewer")
+st.title("MRI Slice Viewer")
 
 SLICE_DIR = "oasis/mri_files"
 
-# Reverse slice order (top → bottom)
+# Reverse slice order
 slice_files = sorted(
     [f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")]
 )[::-1]
@@ -179,28 +177,24 @@ if "slice_index" not in st.session_state:
 if "play" not in st.session_state:
     st.session_state.play = False
 
-
-# --- CALLBACK for slider (must force rerun for real-time updating) ---
+# --- CALLBACK FOR SLIDER ---
 def update_slice():
     st.session_state.slice_index = st.session_state.slice_slider
-    st.rerun()
-
 
 # --- REAL-TIME SLIDER ---
 st.slider(
     "Slice",
-    min_value=0,
-    max_value=len(slice_files) - 1,
+    0,
+    len(slice_files) - 1,
     value=st.session_state.slice_index,
     key="slice_slider",
     on_change=update_slice
 )
 
-
 # --- IMAGE PLACEHOLDER ---
 image_placeholder = st.empty()
 
-# Display selected slice
+# Display current slice
 img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
 img = Image.open(img_path)
 image_placeholder.image(
@@ -209,45 +203,35 @@ image_placeholder.image(
     width="stretch"
 )
 
-
-# --- PLAY / PAUSE ---
+# --- PLAY/PAUSE BUTTONS ---
 col1, col2 = st.columns(2)
-
 if col1.button("▶ Play"):
     st.session_state.play = True
-    st.rerun()
-
 if col2.button("⏸ Pause"):
     st.session_state.play = False
-    st.rerun()
-
 
 # --- AUTOPLAY LOOP ---
 if st.session_state.play:
-    i = st.session_state.slice_index + 1
+    for i in range(st.session_state.slice_index, len(slice_files)):
+        if not st.session_state.play:
+            break
 
-    # Stop when we reach the end
-    if i >= len(slice_files):
-        st.session_state.play = False
-        st.rerun()
+        st.session_state.slice_index = i
 
-    # Update index
-    st.session_state.slice_index = i
+        # update image
+        img_path = os.path.join(SLICE_DIR, slice_files[i])
+        img = Image.open(img_path)
+        image_placeholder.image(
+            img,
+            caption=f"Slice {i}",
+            width="stretch"
+        )
 
-    # Draw next frame
-    img_path = os.path.join(SLICE_DIR, slice_files[i])
-    img = Image.open(img_path)
-    image_placeholder.image(
-        img,
-        caption=f"Slice {i}",
-        width="stretch"
-    )
+        # DO NOT WRITE TO st.session_state.slice_slider EVER
+        # The slider will update on rerun because its value = slice_index
 
-    # Control playback speed
-    time.sleep(0.10)
+        time.sleep(0.12)
 
-    # Show the next frame
-    st.rerun()
 
 
 
