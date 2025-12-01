@@ -79,25 +79,24 @@ st.write("All references go here.")
 
 st.title("MRI Slice Viewer")
 
-# Show the CSV (uploaded or default)
-uploaded = st.file_uploader("Upload a CSV to preview (optional)", type=["csv"]) 
-data_source = None
-if uploaded is not None:
-    df = pd.read_csv(uploaded)
-    data_source = "(uploaded file)"
-else:
-    df = get_data()
-    if df is not None:
-        data_source = "data/Stuff_to_plot_and_play_with.csv"
-
-if df is None:
-    st.warning("No dataset found. Add `data/Stuff_to_plot_and_play_with.csv` or upload a CSV.")
-else:
-    st.info(f"Loaded dataset: {data_source}")
-    st.subheader("Data preview (first 5 rows)")
-    st.dataframe(df.head())
 
 SLICE_DIR = "oasis/mri_files"
+
+# Reverse slice order
+slice_files = sorted(
+    [f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")]
+)[::-1]
+
+# Initialize state
+if "slice_index" not in st.session_state:
+    st.session_state.slice_index = 0
+if "play" not in st.session_state:
+    st.session_state.play = False
+
+# --- CALLBACK FOR SLIDER ---
+def update_slice():
+    st.session_state.slice_index = st.session_state.slice_slider
+
 
 # --- REAL-TIME SLIDER ---
 st.slider(
@@ -145,13 +144,61 @@ if st.session_state.play:
             width="stretch"
         )
 
+            # Placeholder for future plot additions
+            # This is where the plot will be added below
+        
         # DO NOT WRITE TO st.session_state.slice_slider EVER
         # The slider will update on rerun because its value = slice_index
 
         time.sleep(0.12)
 
 
+# -----------------------------
+# Box-and-whisker: nWBV by CDR
+# -----------------------------
+# Load the default CSV from the repository (ensure `df` exists before plotting)
+df = get_data()
+if df is None:
+    st.warning("No dataset found. Add `data/Stuff_to_plot_and_play_with.csv` to the `data/` folder.")
 
+try:
+    if df is not None:
+        if 'CDR' in df.columns and 'nWBV' in df.columns:
+            try:
+                import matplotlib.pyplot as plt
+                import seaborn as sns
+
+                fig, ax = plt.subplots(figsize=(8, 4))
+                sns.boxplot(x='CDR', y='nWBV', data=df, ax=ax)
+                ax.set_xlabel('CDR')
+                ax.set_ylabel('nWBV')
+                ax.set_title('nWBV by CDR (box-and-whisker)')
+                st.pyplot(fig)
+            except Exception:
+                # Fallback: use pandas/matplotlib if seaborn unavailable
+                try:
+                    import matplotlib.pyplot as plt
+                    fig, ax = plt.subplots(figsize=(8, 4))
+                    df.boxplot(column='nWBV', by='CDR', ax=ax)
+                    ax.set_xlabel('CDR')
+                    ax.set_ylabel('nWBV')
+                    ax.set_title('nWBV by CDR (box-and-whisker)')
+                    # pandas adds a suptitle with the grouping label; remove it
+                    fig.suptitle('')
+                    st.pyplot(fig)
+                except Exception:
+                    st.error('Unable to render boxplot: matplotlib/seaborn not available')
+        else:
+            st.warning('Dataset does not contain required columns: `CDR` and `nWBV`.')
+    else:
+        st.warning('No dataset loaded; cannot render boxplot.')
+except Exception as e:
+    st.error(f'Error while preparing boxplot: {e}')
+
+# Data preview (first 5 rows)
+if df is not None:
+    st.subheader("Data preview (first 5 rows)")
+    st.dataframe(df.head())
 
 
 
