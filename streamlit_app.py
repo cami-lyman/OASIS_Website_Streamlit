@@ -22,6 +22,7 @@ import os
 from PIL import Image
 import time
 from typing import List
+import numpy as np
 
 # Try to import plotting libraries (optional for boxplot)
 try:
@@ -168,11 +169,102 @@ def render_data_and_graphs():
             ax.set_xlabel('CDR')
             ax.set_ylabel('nWBV')
             ax.set_title('nWBV by CDR (box-and-whisker)')
+            # Zoom y-axis to emphasize differences: center on mean ± 1.5*std
+            try:
+                nwbv_vals = df_local['nWBV'].dropna()
+                mean = nwbv_vals.mean()
+                std = nwbv_vals.std()
+                y_low = max(nwbv_vals.min(), mean - 1.5 * std)
+                y_high = min(nwbv_vals.max(), mean + 1.5 * std)
+                if y_high > y_low:
+                    pad = (y_high - y_low) * 0.06
+                    ax.set_ylim(y_low - pad, y_high + pad)
+            except Exception:
+                pass
             st.pyplot(fig)
         except Exception as e:
             st.error(f'Unable to render boxplot: {e}')
+        # Average nWBV by CDR (bar plot with standard error)
+        try:
+            st.subheader('Average nWBV by CDR')
+            # compute group means and SEM
+            grp = df_local.groupby('CDR')['nWBV'].agg(['mean', 'sem']).reset_index()
+            fig2, ax2 = plt.subplots(figsize=(6, 4))
+            ax2.bar(grp['CDR'].astype(str), grp['mean'], yerr=grp['sem'], capsize=6, color='tab:orange')
+            ax2.set_xlabel('CDR')
+            ax2.set_ylabel('Average nWBV')
+            ax2.set_title('Average nWBV by CDR (mean ± SEM)')
+            # Apply same zooming as the boxplot so differences are easier to see
+            try:
+                if 'nwbv_vals' not in locals():
+                    nwbv_vals = df_local['nWBV'].dropna()
+                mean = nwbv_vals.mean()
+                std = nwbv_vals.std()
+                y_low = max(nwbv_vals.min(), mean - 1.5 * std)
+                y_high = min(nwbv_vals.max(), mean + 1.5 * std)
+                if y_high > y_low:
+                    pad = (y_high - y_low) * 0.06
+                    ax2.set_ylim(y_low - pad, y_high + pad)
+            except Exception:
+                pass
+            st.pyplot(fig2)
+        except Exception as e:
+            st.error(f'Unable to render average nWBV plot: {e}')
     else:
         st.warning('Dataset does not contain required columns: `CDR` and `nWBV`.')
+
+    # Scatterplot: nWBV vs Age, colored by sex (Female=red, Male=blue)
+    st.subheader('nWBV vs Age (scatter)')
+    if not PLOTTING_AVAILABLE:
+        st.warning('Matplotlib and seaborn are required for plotting. Install them with: `pip install matplotlib seaborn`')
+        return
+
+    # Find likely age and sex columns (be tolerant to different column names)
+    age_cols = ['AGE', 'Age', 'age']
+    sex_cols = ['M/F', 'SEX', 'Sex', 'sex', 'Gender', 'gender']
+    age_col = next((c for c in age_cols if c in df_local.columns), None)
+    sex_col = next((c for c in sex_cols if c in df_local.columns), None)
+
+    if age_col is None or sex_col is None or 'nWBV' not in df_local.columns:
+        st.warning('Dataset must contain `age`, `nWBV`, and a sex column (e.g. `M/F` or `sex`) to render the scatterplot.')
+    else:
+        try:
+            df_plot = df_local[[age_col, 'nWBV', sex_col]].dropna()
+            def _sex_color(v):
+                s = str(v).strip().lower()
+                if s in ('f', 'female'):
+                    return 'red'
+                if s in ('m', 'male'):
+                    return 'blue'
+                return 'gray'
+
+            colors = df_plot[sex_col].map(_sex_color)
+
+            fig, ax = plt.subplots(figsize=(8, 4))
+            ax.scatter(df_plot[age_col], df_plot['nWBV'], c=colors, alpha=0.8, edgecolor='k')
+            ax.set_xlabel(age_col)
+            ax.set_ylabel('nWBV')
+            ax.set_title('nWBV vs Age (scatter) — Female=red, Male=blue')
+            st.pyplot(fig)
+        except Exception as e:
+            st.error(f'Unable to render scatterplot: {e}')
+
+    # Histogram: distribution of nWBV
+    st.subheader('Distribution of nWBV (histogram)')
+    if 'nWBV' not in df_local.columns:
+        st.warning('Dataset does not contain `nWBV` for the histogram.')
+    else:
+        try:
+            vals = df_local['nWBV'].dropna()
+            fig, ax = plt.subplots(figsize=(8, 3))
+            # Render histogram without KDE line (user requested no line)
+            sns.histplot(vals, bins=20, kde=False, color='tab:purple', ax=ax)
+            ax.set_xlabel('nWBV')
+            ax.set_ylabel('Count')
+            ax.set_title('Distribution of nWBV')
+            st.pyplot(fig)
+        except Exception as e:
+            st.error(f'Unable to render histogram: {e}')
 
 def render_conclusions():
     st.header('Conclusions', divider='blue')
