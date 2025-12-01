@@ -1,21 +1,23 @@
 [theme]
-# Base theme
-base = "dark"
-primaryColor = "#4da6ff"
-backgroundColor = "#0e1117"
-secondaryBackgroundColor = "#262730"
-textColor = "#fafafa"
-font = "sans serif"
+# Base theme (warm tan/beige palette inspired by docs sites)
+base = "light"
+primaryColor = "#0066cc"
+backgroundColor = "#f5f2e8"
+secondaryBackgroundColor = "#ede9d9"
+textColor = "#262730"
+font = "Source Sans 3:https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap, sans-serif"
+headingFont = "Source Sans 3:https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap, sans-serif"
+codeFont = "'Source Code Pro':https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap, monospace"
 
 [theme.light]
 # Light theme configuration
 primaryColor = "#0066cc"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#cbd5e8"
+backgroundColor = "#f5f2e8"
+secondaryBackgroundColor = "#ede9d9"
 textColor = "#262730"
 
 [theme.light.sidebar]
-backgroundColor = "#cbd5e8"
+backgroundColor = "#ede9d9"
 textColor = "#262730"
 
 [theme.dark]
@@ -29,5 +31,18 @@ textColor = "#fafafa"
 backgroundColor = "#1a1a1a"
 textColor = "#fafafa"
 
+# Optional: serve static files (fonts/images) like template examples
 [server]
 headless = true
+fileWatcherType = "poll"
+folderWatchBlacklist = ["__pycache__", "data"]
+enableStaticServing = true
+
+[browser]
+# Template-style privacy/telemetry
+gatherUsageStats = false
+
+[runner]
+# Match template guidance for responsiveness and magic
+fastReruns = true
+magicEnabled = true

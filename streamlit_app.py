@@ -166,6 +166,46 @@ def render_references():
 
 # Sidebar navigation
 st.sidebar.header('Navigation')
+# Sidebar styles matching streamlit_template - whole option darkens on hover/active
+st.sidebar.markdown(
+    """
+    <style>
+    /* Hide the radio button circles */
+    section[data-testid="stSidebar"] .stRadio > div > label > div[data-testid="stMarkdownContainer"] {
+        padding-left: 0;
+    }
+    section[data-testid="stSidebar"] .stRadio input[type="radio"] {
+        display: none;
+    }
+    
+    /* Style the label containers */
+    section[data-testid="stSidebar"] .stRadio > div {
+        gap: 2px;
+    }
+    section[data-testid="stSidebar"] .stRadio label {
+        padding: 8px 12px;
+        margin: 0;
+        border-radius: 6px;
+        background: transparent;
+        transition: background-color 0.15s ease;
+        cursor: pointer;
+    }
+    
+    /* Hover state - slightly darker */
+    section[data-testid="stSidebar"] .stRadio label:hover {
+        background: rgba(0, 0, 0, 0.06);
+    }
+    
+    /* Active/selected state - darker background */
+    section[data-testid="stSidebar"] .stRadio input:checked + div + label,
+    section[data-testid="stSidebar"] .stRadio input:checked ~ label {
+        background: rgba(0, 0, 0, 0.10);
+        font-weight: 500;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 page = st.sidebar.radio(
     'Go to',
     (
