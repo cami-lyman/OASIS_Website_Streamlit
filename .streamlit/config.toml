@@ -1,0 +1,33 @@
+[theme]
+# Base theme
+base = "dark"
+primaryColor = "#4da6ff"
+backgroundColor = "#0e1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#fafafa"
+font = "sans serif"
+
+[theme.light]
+# Light theme configuration
+primaryColor = "#0066cc"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#cbd5e8"
+textColor = "#262730"
+
+[theme.light.sidebar]
+backgroundColor = "#cbd5e8"
+textColor = "#262730"
+
+[theme.dark]
+# Dark theme configuration
+primaryColor = "#4da6ff"
+backgroundColor = "#0e1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#fafafa"
+
+[theme.dark.sidebar]
+backgroundColor = "#1a1a1a"
+textColor = "#fafafa"
+
+[server]
+headless = true
