@@ -10,25 +10,46 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# Declare some useful functions.
+# Simple CSV loader (not GDP-specific)
+
+
+
+import streamlit as st
+import pandas as pd
+import math
+from pathlib import Path
+import os
+from PIL import Image
+import time
+
+# Set the title and favicon that appear in the Browser's tab bar.
+st.set_page_config(
+    page_title='Examining the Relationship between Brain Volume and Dementia Diagnoses',
+    page_icon=':brain:',
+)
+
+# -----------------------------------------------------------------------------
+# Simple CSV loader (not GDP-specific)
 
 
 @st.cache_data
-   """Grab GDP data from a CSV file.
+def get_data(filename=None):
+    """Load a CSV file and return a DataFrame.
 
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
+    By default this reads `data/Stuff_to_plot_and_play_with.csv` from the
+    repository. If the file is missing, the caller can use `st.file_uploader`
+    to provide a file at runtime.
     """
-def get_brain_data():
-    DATA_FILENAME = Path(__file__).parent/'data/Stuff_to_plot_and_play_with.csv'
-    df = pd.read_csv(DATA_FILENAME)
-    print(df.head())   # optional
+
+    if filename is None:
+        filename = Path(__file__).parent / "data/Stuff_to_plot_and_play_with.csv"
+
+    try:
+        df = pd.read_csv(filename)
+    except Exception:
+        return None
+
     return df
-
-   
-
-gdp_df = get_gdp_data()
 
 # -----------------------------------------------------------------------------
 # Draw the actual page
@@ -56,29 +77,27 @@ st.write("Final conclusions go here.")
 st.header('References', divider='blue')
 st.write("All references go here.")
 
-import streamlit as st
-import os
-from PIL import Image
-import time
-
 st.title("MRI Slice Viewer")
 
+# Show the CSV (uploaded or default)
+uploaded = st.file_uploader("Upload a CSV to preview (optional)", type=["csv"]) 
+data_source = None
+if uploaded is not None:
+    df = pd.read_csv(uploaded)
+    data_source = "(uploaded file)"
+else:
+    df = get_data()
+    if df is not None:
+        data_source = "data/Stuff_to_plot_and_play_with.csv"
+
+if df is None:
+    st.warning("No dataset found. Add `data/Stuff_to_plot_and_play_with.csv` or upload a CSV.")
+else:
+    st.info(f"Loaded dataset: {data_source}")
+    st.subheader("Data preview (first 5 rows)")
+    st.dataframe(df.head())
+
 SLICE_DIR = "oasis/mri_files"
-
-# Reverse slice order
-slice_files = sorted(
-    [f for f in os.listdir(SLICE_DIR) if f.lower().endswith(".png")]
-)[::-1]
-
-# Initialize state
-if "slice_index" not in st.session_state:
-    st.session_state.slice_index = 0
-if "play" not in st.session_state:
-    st.session_state.play = False
-
-# --- CALLBACK FOR SLIDER ---
-def update_slice():
-    st.session_state.slice_index = st.session_state.slice_slider
 
 # --- REAL-TIME SLIDER ---
 st.slider(
