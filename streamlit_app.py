@@ -10,7 +10,7 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# Simple CSV loader (not GDP-specific)
+# Simple CSV loader
 
 
 
@@ -46,13 +46,13 @@ st.set_page_config(
 def get_data(filename=None):
     """Load a CSV file and return a DataFrame.
 
-    By default this reads `data/Stuff_to_plot_and_play_with.csv` from the
+    By default this reads `data/final_data_oasis.csv` from the
     repository. If the file is missing, the caller can use `st.file_uploader`
     to provide a file at runtime.
     """
 
     if filename is None:
-        filename = Path(__file__).parent / "data/Stuff_to_plot_and_play_with.csv"
+        filename = Path(__file__).parent / "data/final_data_oasis.csv"
 
     try:
         df = pd.read_csv(filename)
@@ -108,8 +108,23 @@ def render_overview():
         st.warning('No MRI slices found in `oasis/mri_files`.')
         return
 
-    # Slider to pick slice (fast, but doesn't trigger blocking loops)
     max_idx = len(slice_files) - 1
+    
+    # Controls at the top
+    col1, col2, col3 = st.columns([1, 1, 1])
+    if col1.button("◀ Prev"):
+        st.session_state.slice_index = max(0, st.session_state.slice_index - 1)
+        st.session_state.play = False
+    
+    play_label = "⏸ Pause" if st.session_state.play else "▶ Play"
+    if col2.button(play_label):
+        st.session_state.play = not st.session_state.play
+    
+    if col3.button("Next ▶"):
+        st.session_state.slice_index = min(max_idx, st.session_state.slice_index + 1)
+        st.session_state.play = False
+
+    # Slider to pick slice
     st.slider(
         "Slice",
         0,
@@ -118,23 +133,20 @@ def render_overview():
         key="slice_slider",
         on_change=update_slice,
     )
-
-    image_placeholder = st.empty()
+    
+    # Display the image
     img_path = os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index])
     img = load_image(img_path)
     if img is None:
         st.error('Unable to load image.')
     else:
-        image_placeholder.image(img, caption=f"Slice {st.session_state.slice_index}", use_container_width=True)
-
-    # Provide Next/Prev controls (non-blocking)
-    col1, col2 = st.columns([1, 1])
-    if col1.button("◀ Prev"):
-        st.session_state.slice_index = max(0, st.session_state.slice_index - 1)
-        st.experimental_rerun()
-    if col2.button("Next ▶"):
-        st.session_state.slice_index = min(max_idx, st.session_state.slice_index + 1)
-        st.experimental_rerun()
+        st.image(img, caption=f"Slice {st.session_state.slice_index}", use_container_width=True)
+    
+    # Auto-advance if playing
+    if st.session_state.play:
+        time.sleep(0.2)
+        st.session_state.slice_index = (st.session_state.slice_index + 1) % (max_idx + 1)
+        st.rerun()
 
 def render_oasis():
     st.header('OASIS', divider='blue')
@@ -153,83 +165,110 @@ def render_data_and_graphs():
     st.header('Data & Graphs', divider='blue')
     df_local = get_data()
     if df_local is None:
-        st.warning("No dataset found. Add `data/Stuff_to_plot_and_play_with.csv` to the `data/` folder.")
+        st.warning("No dataset found. Add `data/final_data_oasis.csv` to the `data/` folder.")
         return
     st.subheader("Data preview (first 5 rows)")
     st.dataframe(df_local.head())
 
-    st.subheader('nWBV by CDR (box-and-whisker)')
+    # Define the three brain volume methods to compare
+    volume_methods = ['nWBV', 'nWBV_brain_extraction', 'nWBV_deep_atropos']
+    method_labels = {
+        'nWBV': 'nWBV (Original)',
+        'nWBV_brain_extraction': 'nWBV (Brain Extraction)',
+        'nWBV_deep_atropos': 'nWBV (Deep Atropos)'
+    }
+    
     if not PLOTTING_AVAILABLE:
         st.warning('Matplotlib and seaborn are required for plotting. Install them with: `pip install matplotlib seaborn`')
         return
-    if 'CDR' in df_local.columns and 'nWBV' in df_local.columns:
+
+    # Check which methods are available in the dataset
+    available_methods = [m for m in volume_methods if m in df_local.columns]
+    if not available_methods:
+        st.warning(f'Dataset does not contain any of the brain volume columns: {", ".join(volume_methods)}')
+        return
+
+    # Boxplots: Brain Volume by CDR for each method
+    st.subheader('Brain Volume by CDR (box-and-whisker) — Comparing Methods')
+    if 'CDR' in df_local.columns:
         try:
-            fig, ax = plt.subplots(figsize=(8, 4))
-            sns.boxplot(x='CDR', y='nWBV', data=df_local, ax=ax)
-            ax.set_xlabel('CDR')
-            ax.set_ylabel('nWBV')
-            ax.set_title('nWBV by CDR (box-and-whisker)')
-            # Zoom y-axis to emphasize differences: center on mean ± 1.5*std
-            try:
-                nwbv_vals = df_local['nWBV'].dropna()
-                mean = nwbv_vals.mean()
-                std = nwbv_vals.std()
-                y_low = max(nwbv_vals.min(), mean - 1.5 * std)
-                y_high = min(nwbv_vals.max(), mean + 1.5 * std)
-                if y_high > y_low:
-                    pad = (y_high - y_low) * 0.06
-                    ax.set_ylim(y_low - pad, y_high + pad)
-            except Exception:
-                pass
+            fig, axes = plt.subplots(1, len(available_methods), figsize=(6*len(available_methods), 4))
+            if len(available_methods) == 1:
+                axes = [axes]
+            
+            for idx, method in enumerate(available_methods):
+                sns.boxplot(x='CDR', y=method, data=df_local, ax=axes[idx])
+                axes[idx].set_xlabel('CDR')
+                axes[idx].set_ylabel('Brain Volume')
+                axes[idx].set_title(method_labels[method])
+                # Zoom y-axis to emphasize differences
+                try:
+                    vals = df_local[method].dropna()
+                    mean = vals.mean()
+                    std = vals.std()
+                    y_low = max(vals.min(), mean - 1.5 * std)
+                    y_high = min(vals.max(), mean + 1.5 * std)
+                    if y_high > y_low:
+                        pad = (y_high - y_low) * 0.06
+                        axes[idx].set_ylim(y_low - pad, y_high + pad)
+                except Exception:
+                    pass
+            
+            plt.tight_layout()
             st.pyplot(fig)
         except Exception as e:
-            st.error(f'Unable to render boxplot: {e}')
-        # Average nWBV by CDR (bar plot with standard error)
+            st.error(f'Unable to render boxplots: {e}')
+
+        # Average Brain Volume by CDR (bar plots with standard error)
         try:
-            st.subheader('Average nWBV by CDR')
-            # compute group means and SEM
-            grp = df_local.groupby('CDR')['nWBV'].agg(['mean', 'sem']).reset_index()
-            fig2, ax2 = plt.subplots(figsize=(6, 4))
-            ax2.bar(grp['CDR'].astype(str), grp['mean'], yerr=grp['sem'], capsize=6, color='tab:orange')
-            ax2.set_xlabel('CDR')
-            ax2.set_ylabel('Average nWBV')
-            ax2.set_title('Average nWBV by CDR (mean ± SEM)')
-            # Apply same zooming as the boxplot so differences are easier to see
-            try:
-                if 'nwbv_vals' not in locals():
-                    nwbv_vals = df_local['nWBV'].dropna()
-                mean = nwbv_vals.mean()
-                std = nwbv_vals.std()
-                y_low = max(nwbv_vals.min(), mean - 1.5 * std)
-                y_high = min(nwbv_vals.max(), mean + 1.5 * std)
-                if y_high > y_low:
-                    pad = (y_high - y_low) * 0.06
-                    ax2.set_ylim(y_low - pad, y_high + pad)
-            except Exception:
-                pass
-            st.pyplot(fig2)
+            st.subheader('Average Brain Volume by CDR (mean ± SEM) — Comparing Methods')
+            fig, axes = plt.subplots(1, len(available_methods), figsize=(5*len(available_methods), 4))
+            if len(available_methods) == 1:
+                axes = [axes]
+            
+            colors = ['tab:orange', 'tab:green', 'tab:blue']
+            for idx, method in enumerate(available_methods):
+                grp = df_local.groupby('CDR')[method].agg(['mean', 'sem']).reset_index()
+                axes[idx].bar(grp['CDR'].astype(str), grp['mean'], yerr=grp['sem'], 
+                            capsize=6, color=colors[idx % len(colors)])
+                axes[idx].set_xlabel('CDR')
+                axes[idx].set_ylabel('Average Brain Volume')
+                axes[idx].set_title(method_labels[method])
+                # Apply same zooming
+                try:
+                    vals = df_local[method].dropna()
+                    mean = vals.mean()
+                    std = vals.std()
+                    y_low = max(vals.min(), mean - 1.5 * std)
+                    y_high = min(vals.max(), mean + 1.5 * std)
+                    if y_high > y_low:
+                        pad = (y_high - y_low) * 0.06
+                        axes[idx].set_ylim(y_low - pad, y_high + pad)
+                except Exception:
+                    pass
+            
+            plt.tight_layout()
+            st.pyplot(fig)
         except Exception as e:
-            st.error(f'Unable to render average nWBV plot: {e}')
+            st.error(f'Unable to render average brain volume plots: {e}')
     else:
-        st.warning('Dataset does not contain required columns: `CDR` and `nWBV`.')
+        st.warning('Dataset does not contain `CDR` column.')
 
-    # Scatterplot: nWBV vs Age, colored by sex (Female=red, Male=blue)
-    st.subheader('nWBV vs Age (scatter)')
-    if not PLOTTING_AVAILABLE:
-        st.warning('Matplotlib and seaborn are required for plotting. Install them with: `pip install matplotlib seaborn`')
-        return
-
-    # Find likely age and sex columns (be tolerant to different column names)
+    # Scatterplots: Brain Volume vs Age, colored by sex
+    st.subheader('Brain Volume vs Age (scatter) — Comparing Methods')
     age_cols = ['AGE', 'Age', 'age']
     sex_cols = ['M/F', 'SEX', 'Sex', 'sex', 'Gender', 'gender']
     age_col = next((c for c in age_cols if c in df_local.columns), None)
     sex_col = next((c for c in sex_cols if c in df_local.columns), None)
 
-    if age_col is None or sex_col is None or 'nWBV' not in df_local.columns:
-        st.warning('Dataset must contain `age`, `nWBV`, and a sex column (e.g. `M/F` or `sex`) to render the scatterplot.')
+    if age_col is None or sex_col is None:
+        st.warning('Dataset must contain age and sex columns to render the scatterplot.')
     else:
         try:
-            df_plot = df_local[[age_col, 'nWBV', sex_col]].dropna()
+            fig, axes = plt.subplots(1, len(available_methods), figsize=(6*len(available_methods), 4))
+            if len(available_methods) == 1:
+                axes = [axes]
+            
             def _sex_color(v):
                 s = str(v).strip().lower()
                 if s in ('f', 'female'):
@@ -238,33 +277,39 @@ def render_data_and_graphs():
                     return 'blue'
                 return 'gray'
 
-            colors = df_plot[sex_col].map(_sex_color)
-
-            fig, ax = plt.subplots(figsize=(8, 4))
-            ax.scatter(df_plot[age_col], df_plot['nWBV'], c=colors, alpha=0.8, edgecolor='k')
-            ax.set_xlabel(age_col)
-            ax.set_ylabel('nWBV')
-            ax.set_title('nWBV vs Age (scatter) — Female=red, Male=blue')
+            for idx, method in enumerate(available_methods):
+                df_plot = df_local[[age_col, method, sex_col]].dropna()
+                colors = df_plot[sex_col].map(_sex_color)
+                
+                axes[idx].scatter(df_plot[age_col], df_plot[method], c=colors, alpha=0.8, edgecolor='k')
+                axes[idx].set_xlabel(age_col)
+                axes[idx].set_ylabel('Brain Volume')
+                axes[idx].set_title(f'{method_labels[method]}\nFemale=red, Male=blue')
+            
+            plt.tight_layout()
             st.pyplot(fig)
         except Exception as e:
-            st.error(f'Unable to render scatterplot: {e}')
+            st.error(f'Unable to render scatterplots: {e}')
 
-    # Histogram: distribution of nWBV
-    st.subheader('Distribution of nWBV (histogram)')
-    if 'nWBV' not in df_local.columns:
-        st.warning('Dataset does not contain `nWBV` for the histogram.')
-    else:
-        try:
-            vals = df_local['nWBV'].dropna()
-            fig, ax = plt.subplots(figsize=(8, 3))
-            # Render histogram without KDE line (user requested no line)
-            sns.histplot(vals, bins=20, kde=False, color='tab:purple', ax=ax)
-            ax.set_xlabel('nWBV')
-            ax.set_ylabel('Count')
-            ax.set_title('Distribution of nWBV')
-            st.pyplot(fig)
-        except Exception as e:
-            st.error(f'Unable to render histogram: {e}')
+    # Histograms: distribution of Brain Volume
+    st.subheader('Distribution of Brain Volume (histogram) — Comparing Methods')
+    try:
+        fig, axes = plt.subplots(1, len(available_methods), figsize=(6*len(available_methods), 3))
+        if len(available_methods) == 1:
+            axes = [axes]
+        
+        colors = ['tab:purple', 'tab:cyan', 'tab:pink']
+        for idx, method in enumerate(available_methods):
+            vals = df_local[method].dropna()
+            sns.histplot(vals, bins=20, kde=False, color=colors[idx % len(colors)], ax=axes[idx])
+            axes[idx].set_xlabel('Brain Volume')
+            axes[idx].set_ylabel('Count')
+            axes[idx].set_title(method_labels[method])
+        
+        plt.tight_layout()
+        st.pyplot(fig)
+    except Exception as e:
+        st.error(f'Unable to render histograms: {e}')
 
 def render_conclusions():
     st.header('Conclusions', divider='blue')
