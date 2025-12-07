@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Set the title and favicon that appear in the Browser's tab bar.
 st.set_page_config(
-    page_title='Examining the Relationship between Brain Volume and Dementia Diagnoses',
+    page_title='Examining the Relationship between Brain Volume and Dementia Diagnoses.',
     page_icon=':brain:', # This is an emoji shortcode. Could be a URL too.
 )
 
@@ -160,7 +160,8 @@ def render_overview():
         if img is None:
             st.error('Unable to load image.')
         else:
-            st.image(img, caption=f"Slice {st.session_state.slice_index}", use_container_width=True)
+            st.image(img, caption=f"Slice {st.session_state.slice_index}", width='stretch')
+
     
     # Auto-advance if playing
     if st.session_state.play:
@@ -365,7 +366,13 @@ PAGES = [
 if 'page' not in st.session_state:
     st.session_state.page = 'Overview'
 
-page = st.sidebar.radio('', PAGES, index=PAGES.index(st.session_state.page) if st.session_state.page in PAGES else 0, label_visibility='collapsed')
+page = st.sidebar.radio(
+    'Navigation',   # MUST NOT BE EMPTY
+    PAGES,
+    index=PAGES.index(st.session_state.page) if st.session_state.page in PAGES else 0,
+    label_visibility='collapsed'
+)
+
 if page != st.session_state.page:
     st.session_state.page = page
 
