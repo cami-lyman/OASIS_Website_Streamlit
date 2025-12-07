@@ -2,27 +2,14 @@ import streamlit as st
 import pandas as pd
 import math
 from pathlib import Path
-
-# Set the title and favicon that appear in the Browser's tab bar.
-st.set_page_config(
-    page_title='Examining the Relationship between Brain Volume and Dementia Diagnoses.',
-    page_icon=':brain:', # This is an emoji shortcode. Could be a URL too.
-)
-
-# -----------------------------------------------------------------------------
-# Simple CSV loader
-
-
-
-import streamlit as st
-import pandas as pd
-import math
-from pathlib import Path
 import os
 from PIL import Image
 import time
 from typing import List
 import numpy as np
+
+os.environ["STREAMLIT_SERVER_PORT"] = "8501"
+os.environ["STREAMLIT_SERVER_ADDRESS"] = "localhost"
 
 # Try to import plotting libraries (optional for boxplot)
 try:
@@ -34,7 +21,7 @@ except ImportError:
 
 # Set the title and favicon that appear in the Browser's tab bar.
 st.set_page_config(
-    page_title='Examining the Relationship between Brain Volume and Dementia Diagnoses',
+    page_title='Examining the Relationship between Brain Volume and Dementia Diagnoses.',
     page_icon=':brain:',
     layout='wide',
 )
