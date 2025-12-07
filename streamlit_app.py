@@ -299,70 +299,51 @@ if "page" not in st.session_state:
 page = st.sidebar.radio("Navigation", PAGES, index=PAGES.index(st.session_state.page))
 st.session_state.page = page
 
-# ------------------------------------------------------------------------
-# CUSTOM SIDEBAR BUTTON STYLING (restored)
-# ------------------------------------------------------------------------
+if page != st.session_state.page:
+    st.session_state.page = page
+
+# Sidebar CSS to make pages look like tiles and remove native radio visuals
 st.sidebar.markdown(
     """
     <style>
-
-    /* Hide default radio circles */
-    section[data-testid="stSidebar"] input[type="radio"] {
-        display: none !important;
-    }
-    section[data-testid="stSidebar"] label > div:first-child {
-        display: none !important;
-    }
-
-    /* Sidebar layout adjustment */
+    section[data-testid="stSidebar"] svg { display: none !important; }
+    section[data-testid="stSidebar"] input[type="radio"] { display: none !important; }
+    section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child { display: none !important; }
     section[data-testid="stSidebar"] .stRadio {
-        margin-top: -0.5rem !important;
+        margin-top: -1rem !important;
     }
-
-    /* Unselected button style */
     section[data-testid="stSidebar"] .stRadio label {
         display: block !important;
-        padding: 10px 14px !important;
+        padding: 10px 12px !important;
         margin: 4px 0 !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
         cursor: pointer !important;
-        transition: all 0.15s ease !important;
-
-        background-color: #f4f4f4 !important;
-        border: 1.5px solid #cccccc !important;
-        font-weight: 500 !important;
-        color: #333333 !important;
+        transition: all 0.12s ease !important;
+        border: 2px solid transparent !important;
     }
-
-    /* Hover effect */
     section[data-testid="stSidebar"] .stRadio label:hover {
-        background-color: #e8e8e8 !important;
+        background: rgba(0,0,0,0.06) !important;
     }
-
-    /* Selected button style */
     section[data-testid="stSidebar"] .stRadio label:has(input[type="radio"]:checked) {
-        background-color: #4a90e2 !important;
-        color: white !important;
-        border: 1.5px solid #2d6fba !important;
+        background: rgba(0,0,0,0.08) !important;
         font-weight: 600 !important;
-        box-shadow: inset 0 1px 2px rgba(0,0,0,0.25) !important;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.15) !important;
     }
-
     </style>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
-# Render selected page
-if page == "Overview":
+if page == 'Overview':
     render_overview()
-elif page == "OASIS":
+elif page == 'OASIS':
     render_oasis()
-elif page == "Code":
+elif page == 'Code':
     render_code()
-elif page == "Data & Graphs":
+elif page == 'Data & Graphs':
     render_data_and_graphs()
-elif page == "Conclusions":
+elif page == 'Conclusions':
     render_conclusions()
-elif page == "References":
+elif page == 'References':
     render_references()
+
