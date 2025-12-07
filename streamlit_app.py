@@ -168,6 +168,10 @@ def render_overview():
         st.session_state.slice_index = (st.session_state.slice_index + 1) % (max_idx + 1)
         st.rerun()
 
+# DO NOT WRITE TO st.session_state.slice_slider EVER
+# The slider will update on rerun because its value = slice_index
+time.sleep(0.08)
+
 def render_oasis():
     st.header('OASIS', divider='blue')
     st.write('Explain the OASIS project and dataset here.')
