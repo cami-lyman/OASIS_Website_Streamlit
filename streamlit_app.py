@@ -375,63 +375,66 @@ def render_data_and_graphs():
     # -------------------------------------------------------------------------
     # SCATTERPLOTS WITH LEGEND
     # -------------------------------------------------------------------------
-    st.subheader('Brain Volume vs Age (scatter) — Comparing Methods')
+    # -------------------------------------------------------------------------
+# SCATTERPLOTS: Brain Volume vs Age, colored by sex (clean legend)
+# -------------------------------------------------------------------------
+st.subheader('Brain Volume vs Age (scatter) — Comparing Methods')
 
-    age_cols = ['AGE', 'Age', 'age']
-    sex_cols = ['M/F', 'SEX', 'Sex', 'sex', 'Gender', 'gender']
-    age_col = next((c for c in age_cols if c in df_local.columns), None)
-    sex_col = next((c for c in sex_cols if c in df_local.columns), None)
+age_cols = ['AGE', 'Age', 'age']
+sex_cols = ['M/F', 'SEX', 'Sex', 'sex', 'Gender', 'gender']
+age_col = next((c for c in age_cols if c in df_local.columns), None)
+sex_col = next((c for c in sex_cols if c in df_local.columns), None)
 
-    if age_col is None or sex_col is None:
-        st.warning('Dataset must contain age and sex columns for scatterplot.')
-        return
+if age_col is None or sex_col is None:
+    st.warning('Dataset must contain age and sex columns for scatterplot.')
+    return
 
-    try:
-        fig, axes = plt.subplots(1, len(available_methods), figsize=(9*len(available_methods), 6))
-        if len(available_methods) == 1:
-            axes = [axes]
+try:
+    fig, axes = plt.subplots(1, len(available_methods), figsize=(9 * len(available_methods), 6))
+    if len(available_methods) == 1:
+        axes = [axes]
 
-        # Legend handles
-        female_handle = plt.Line2D([], [], marker='o', color='red', linestyle='None', label='Female')
-        male_handle = plt.Line2D([], [], marker='o', color='blue', linestyle='None', label='Male')
-        #other_handle = plt.Line2D([], [], marker='o', color='gray', linestyle='None', label='Other/Unknown')
+    # Legend handles for ONLY male & female
+    female_handle = plt.Line2D([], [], marker='o', color='red', linestyle='None', label='Female')
+    male_handle = plt.Line2D([], [], marker='o', color='blue', linestyle='None', label='Male')
 
-        # Color mapper
-        def _sex_color(v):
-            s = str(v).strip().lower()
-            if s in ('f', 'female'): return 'red'
-            if s in ('m', 'male'): return 'blue'
-            return 'gray'
+    # Color mapper
+    def _sex_color(v):
+        s = str(v).strip().lower()
+        if s in ('f', 'female'): return 'red'
+        if s in ('m', 'male'): return 'blue'
+        return 'lightgray'  # still plot them, but no legend entry
 
-        for idx, method in enumerate(available_methods):
-            df_plot = df_local[[age_col, method, sex_col]].dropna()
-            colors = df_plot[sex_col].map(_sex_color)
+    for idx, method in enumerate(available_methods):
+        df_plot = df_local[[age_col, method, sex_col]].dropna()
+        colors = df_plot[sex_col].map(_sex_color)
 
-            axes[idx].scatter(
-                df_plot[age_col],
-                df_plot[method],
-                c=colors,
-                alpha=0.8,
-                edgecolor='k'
-            )
+        axes[idx].scatter(
+            df_plot[age_col],
+            df_plot[method],
+            c=colors,
+            alpha=0.8,
+            edgecolor='k'
+        )
 
-            axes[idx].set_xlabel(age_col, fontsize=14)
-            axes[idx].set_ylabel('Brain Volume', fontsize=14)
-            axes[idx].set_title(method_labels[method], fontsize=16)
-            axes[idx].tick_params(axis='both', labelsize=12)
+        axes[idx].set_xlabel(age_col, fontsize=14)
+        axes[idx].set_ylabel('Brain Volume', fontsize=14)
+        axes[idx].set_title(method_labels[method], fontsize=16)
+        axes[idx].tick_params(axis='both', labelsize=12)
 
-            # Add legend
-            axes[idx].legend(
-                handles=[female_handle, male_handle, other_handle],
-                fontsize=12,
-                loc='best'
-            )
+        # Legend with ONLY male & female
+        axes[idx].legend(
+            handles=[female_handle, male_handle],
+            fontsize=12,
+            loc='best'
+        )
 
-        plt.tight_layout()
-        st.pyplot(fig)
+    plt.tight_layout()
+    st.pyplot(fig)
 
-    except Exception as e:
-        st.error(f'Unable to render scatterplots: {e}')
+except Exception as e:
+    st.error(f'Unable to render scatterplots: {e}')
+
 
 
 
