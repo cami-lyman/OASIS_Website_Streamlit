@@ -12,7 +12,10 @@
       ]
     },
     "vscode": {
-      "settings": {},
+      "settings": {
+        "remote.autoForwardPorts": false,
+        "remote.restoreForwardedPorts": false
+      },
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance"
@@ -35,3 +38,4 @@
 
   "forwardPorts": [8501]
 }
+
