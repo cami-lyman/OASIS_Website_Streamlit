@@ -28,6 +28,7 @@ import numpy as np
 try:
     import matplotlib.pyplot as plt
     import seaborn as sns
+    from matplotlib.lines import Line2D
     PLOTTING_AVAILABLE = True
 except ImportError:
     PLOTTING_AVAILABLE = False
@@ -336,8 +337,16 @@ def render_data_and_graphs():
                 axes[idx].scatter(df_plot[age_col], df_plot[method], c=colors, alpha=0.8, edgecolor='k')
                 axes[idx].set_xlabel(age_col, fontsize=14)
                 axes[idx].set_ylabel('Brain Volume', fontsize=14)
-                axes[idx].set_title(f'{method_labels[method]}\nFemale=red, Male=blue', fontsize=16)
+                axes[idx].set_title(method_labels[method], fontsize=16)
                 axes[idx].tick_params(axis='both', labelsize=12)
+
+                # Add a legend for sex colors
+                handles = [
+                    Line2D([0], [0], marker='o', color='w', markerfacecolor='red', markersize=8, label='Female', markeredgecolor='k'),
+                    Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', markersize=8, label='Male', markeredgecolor='k'),
+                    Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', markersize=8, label='Other', markeredgecolor='k')
+                ]
+                axes[idx].legend(handles=handles, title='Sex')
             
             plt.tight_layout()
             st.pyplot(fig)
