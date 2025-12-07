@@ -87,7 +87,7 @@ def update_slice():
 
 
 def render_overview():
-    st.title('Examining the Relationship between Brain Volume and Dementia Diagnoses...')
+    st.title('Examining the Relationship between Brain Volume and Dementia Diagnoses :)')
     st.write('An analysis of data provided by the OASIS project.')
     
     # Create two columns: text on left, MRI viewer on right
@@ -290,43 +290,150 @@ def render_data_and_graphs():
     else:
         st.warning('Dataset does not contain `CDR` column.')
 
-    # Scatterplots: Brain Volume vs Age, colored by sex
+def render_data_and_graphs():
+    st.header('Data & Graphs', divider='blue')
+    df_local = get_data()
+    if df_local is None:
+        st.warning("No dataset found. Add `data/final_data_oasis.csv` to the `data/` folder.")
+        return
+
+    st.subheader("Data preview")
+    st.dataframe(df_local.iloc[:, 1:], height=210)
+
+    # Define the three brain volume methods to compare
+    volume_methods = ['nWBV', 'nWBV_brain_extraction', 'nWBV_deep_atropos']
+    method_labels = {
+        'nWBV': 'nWBV (Original)',
+        'nWBV_brain_extraction': 'nWBV (Brain Extraction)',
+        'nWBV_deep_atropos': 'nWBV (Deep Atropos)'
+    }
+
+    if not PLOTTING_AVAILABLE:
+        st.warning('Matplotlib and seaborn are required for plotting. Install them with: `pip install matplotlib seaborn`')
+        return
+
+    # Check which methods are available
+    available_methods = [m for m in volume_methods if m in df_local.columns]
+    if not available_methods:
+        st.warning(f'Dataset does not contain any of the brain volume columns: {", ".join(volume_methods)}')
+        return
+
+    # Consistent colors
+    method_colors = {
+        'nWBV': 'tab:orange',
+        'nWBV_brain_extraction': 'tab:green',
+        'nWBV_deep_atropos': 'tab:blue'
+    }
+
+    # -------------------------------------------------------------------------
+    # HISTOGRAMS
+    # -------------------------------------------------------------------------
+    st.subheader('Distribution of Brain Volume (histogram) — Comparing Methods')
+    try:
+        fig, axes = plt.subplots(1, len(available_methods), figsize=(9*len(available_methods), 6))
+        if len(available_methods) == 1:
+            axes = [axes]
+
+        for idx, method in enumerate(available_methods):
+            vals = df_local[method].dropna()
+            sns.histplot(vals, bins=20, kde=False, color=method_colors[method], ax=axes[idx])
+            axes[idx].set_xlabel('Brain Volume', fontsize=14)
+            axes[idx].set_ylabel('Count', fontsize=14)
+            axes[idx].set_title(method_labels[method], fontsize=16)
+            axes[idx].tick_params(axis='both', labelsize=12)
+
+        plt.tight_layout()
+        st.pyplot(fig)
+    except Exception as e:
+        st.error(f'Unable to render histograms: {e}')
+
+    # -------------------------------------------------------------------------
+    # BOXPLOTS BY CDR
+    # -------------------------------------------------------------------------
+    st.subheader('Brain Volume by CDR (box-and-whisker) — Comparing Methods')
+
+    if 'CDR' in df_local.columns:
+        try:
+            fig, axes = plt.subplots(1, len(available_methods), figsize=(9*len(available_methods), 6))
+            if len(available_methods) == 1:
+                axes = [axes]
+
+            for idx, method in enumerate(available_methods):
+                sns.boxplot(x='CDR', y=method, data=df_local, ax=axes[idx], color=method_colors[method])
+                axes[idx].set_xlabel('CDR', fontsize=14)
+                axes[idx].set_ylabel('Brain Volume', fontsize=14)
+                axes[idx].set_title(method_labels[method], fontsize=16)
+                axes[idx].tick_params(axis='both', labelsize=12)
+
+            plt.tight_layout()
+            st.pyplot(fig)
+        except Exception as e:
+            st.error(f'Unable to render boxplots: {e}')
+    else:
+        st.warning('Dataset does not contain `CDR` column.')
+
+    # -------------------------------------------------------------------------
+    # SCATTERPLOTS WITH LEGEND
+    # -------------------------------------------------------------------------
     st.subheader('Brain Volume vs Age (scatter) — Comparing Methods')
+
     age_cols = ['AGE', 'Age', 'age']
     sex_cols = ['M/F', 'SEX', 'Sex', 'sex', 'Gender', 'gender']
     age_col = next((c for c in age_cols if c in df_local.columns), None)
     sex_col = next((c for c in sex_cols if c in df_local.columns), None)
 
     if age_col is None or sex_col is None:
-        st.warning('Dataset must contain age and sex columns to render the scatterplot.')
-    else:
-        try:
-            fig, axes = plt.subplots(1, len(available_methods), figsize=(9*len(available_methods), 6))
-            if len(available_methods) == 1:
-                axes = [axes]
-            
-            def _sex_color(v):
-                s = str(v).strip().lower()
-                if s in ('f', 'female'):
-                    return 'red'
-                if s in ('m', 'male'):
-                    return 'blue'
-                return 'gray'
+        st.warning('Dataset must contain age and sex columns for scatterplot.')
+        return
 
-            for idx, method in enumerate(available_methods):
-                df_plot = df_local[[age_col, method, sex_col]].dropna()
-                colors = df_plot[sex_col].map(_sex_color)
-                
-                axes[idx].scatter(df_plot[age_col], df_plot[method], c=colors, alpha=0.8, edgecolor='k')
-                axes[idx].set_xlabel(age_col, fontsize=14)
-                axes[idx].set_ylabel('Brain Volume', fontsize=14)
-                axes[idx].set_title(f'{method_labels[method]}\nFemale=red, Male=blue', fontsize=16)
-                axes[idx].tick_params(axis='both', labelsize=12)
-            
-            plt.tight_layout()
-            st.pyplot(fig)
-        except Exception as e:
-            st.error(f'Unable to render scatterplots: {e}')
+    try:
+        fig, axes = plt.subplots(1, len(available_methods), figsize=(9*len(available_methods), 6))
+        if len(available_methods) == 1:
+            axes = [axes]
+
+        # Legend handles
+        female_handle = plt.Line2D([], [], marker='o', color='red', linestyle='None', label='Female')
+        male_handle = plt.Line2D([], [], marker='o', color='blue', linestyle='None', label='Male')
+        other_handle = plt.Line2D([], [], marker='o', color='gray', linestyle='None', label='Other/Unknown')
+
+        # Color mapper
+        def _sex_color(v):
+            s = str(v).strip().lower()
+            if s in ('f', 'female'): return 'red'
+            if s in ('m', 'male'): return 'blue'
+            return 'gray'
+
+        for idx, method in enumerate(available_methods):
+            df_plot = df_local[[age_col, method, sex_col]].dropna()
+            colors = df_plot[sex_col].map(_sex_color)
+
+            axes[idx].scatter(
+                df_plot[age_col],
+                df_plot[method],
+                c=colors,
+                alpha=0.8,
+                edgecolor='k'
+            )
+
+            axes[idx].set_xlabel(age_col, fontsize=14)
+            axes[idx].set_ylabel('Brain Volume', fontsize=14)
+            axes[idx].set_title(method_labels[method], fontsize=16)
+            axes[idx].tick_params(axis='both', labelsize=12)
+
+            # Add legend
+            axes[idx].legend(
+                handles=[female_handle, male_handle, other_handle],
+                fontsize=12,
+                loc='best'
+            )
+
+        plt.tight_layout()
+        st.pyplot(fig)
+
+    except Exception as e:
+        st.error(f'Unable to render scatterplots: {e}')
+
+
 
 def render_conclusions():
     st.header('Conclusions', divider='blue')
