@@ -394,7 +394,7 @@ def render_data_and_graphs():
         # Legend handles
         female_handle = plt.Line2D([], [], marker='o', color='red', linestyle='None', label='Female')
         male_handle = plt.Line2D([], [], marker='o', color='blue', linestyle='None', label='Male')
-        other_handle = plt.Line2D([], [], marker='o', color='gray', linestyle='None', label='Other/Unknown')
+        #other_handle = plt.Line2D([], [], marker='o', color='gray', linestyle='None', label='Other/Unknown')
 
         # Color mapper
         def _sex_color(v):
