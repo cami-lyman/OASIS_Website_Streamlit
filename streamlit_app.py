@@ -296,8 +296,15 @@ PAGES = [
 if "page" not in st.session_state:
     st.session_state.page = "Overview"
 
-page = st.sidebar.radio("Navigation", PAGES, index=PAGES.index(st.session_state.page))
-st.session_state.page = page
+st.sidebar.header("Navigation")
+
+page = st.sidebar.radio(
+    "Navigation",
+    PAGES,
+    index=PAGES.index(st.session_state.page),
+    label_visibility="collapsed"   # Hides the text but keeps accessibility metadata
+)
+
 
 if page != st.session_state.page:
     st.session_state.page = page
