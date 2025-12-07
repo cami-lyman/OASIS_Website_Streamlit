@@ -75,7 +75,7 @@ def update_slice():
 # OVERVIEW PAGE
 # ------------------------------------------------------------------------
 def render_overview():
-    st.title('Examining the Relationship between Brain Volume and Dementia Diagnoses :)')
+    st.title('Examining the Relationship between Brain Volume and Dementia Diagnoses')
     st.write('An analysis of data provided by the OASIS project.')
 
     text_col, image_col = st.columns([1, 1])
@@ -83,8 +83,12 @@ def render_overview():
     with text_col:
         st.subheader("About")
         st.write("""
-        This project examines the relationship between brain volume measurements 
-        and dementia diagnoses using data from the OASIS project.
+        Dementia is a neurodegenerative disease which impacts millions of people around the world. Currently, the average time to diagnosis is 3.5 years [1]. This delay reduces the treatment options available, as many treatments that slow disease progression are only effective in the early stages. Brain MRIs may offer a way to improve early diagnosis and track disease progression, as some brain changes can be seen years before symptoms develop [2]. Neuroinflammation is a likely part of the pathogenesis of Alzheimer’s, and it can be seen on MRIs [3][4]. Additionally, loss of brain volume over time is a known feature of dementia.
+
+        Our goal was to examine the relationship between brain volume and dementia status using data from the OASIS (Open Access Series of Imaging Studies) project. The OASIS project dataset we used contained three-dimensional MRI scan files as well as information about each patient’s dementia status as measured by clinical dementia rating (CDR) and demographic information such as age and gender. The MRI viewer on the right displays cross-sectional brain scans that allow you to explore the anatomy captured in this dataset. You can learn more about the OASIS project on the “OASIS” page.
+
+        We derived the brain volume from the MRI files by slicing them into two-dimensional images, segmenting the image to calculate brain area, and adding up the brain area from each slice. We used two different deep learning models within ANTsPy to segment the brain areas: brain extraction and deep atropos. You can see more about our methods on the “Code” page. Our results can be found on the “Data & Graphs” and “Conclusions” pages.
+
         """)
 
     with image_col:
