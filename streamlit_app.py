@@ -87,7 +87,7 @@ def update_slice():
 
 
 def render_overview():
-    st.title('Examining the Relationship between Brain Volume and Dementia Diagnoses..')
+    st.title('Examining the Relationship between Brain Volume and Dementia Diagnoses...')
     st.write('An analysis of data provided by the OASIS project.')
     
     # Create two columns: text on left, MRI viewer on right
