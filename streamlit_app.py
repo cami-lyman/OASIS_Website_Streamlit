@@ -299,6 +299,60 @@ if "page" not in st.session_state:
 page = st.sidebar.radio("Navigation", PAGES, index=PAGES.index(st.session_state.page))
 st.session_state.page = page
 
+# ------------------------------------------------------------------------
+# CUSTOM SIDEBAR BUTTON STYLING (restored)
+# ------------------------------------------------------------------------
+st.sidebar.markdown(
+    """
+    <style>
+
+    /* Hide default radio circles */
+    section[data-testid="stSidebar"] input[type="radio"] {
+        display: none !important;
+    }
+    section[data-testid="stSidebar"] label > div:first-child {
+        display: none !important;
+    }
+
+    /* Sidebar layout adjustment */
+    section[data-testid="stSidebar"] .stRadio {
+        margin-top: -0.5rem !important;
+    }
+
+    /* Unselected button style */
+    section[data-testid="stSidebar"] .stRadio label {
+        display: block !important;
+        padding: 10px 14px !important;
+        margin: 4px 0 !important;
+        border-radius: 10px !important;
+        cursor: pointer !important;
+        transition: all 0.15s ease !important;
+
+        background-color: #f4f4f4 !important;
+        border: 1.5px solid #cccccc !important;
+        font-weight: 500 !important;
+        color: #333333 !important;
+    }
+
+    /* Hover effect */
+    section[data-testid="stSidebar"] .stRadio label:hover {
+        background-color: #e8e8e8 !important;
+    }
+
+    /* Selected button style */
+    section[data-testid="stSidebar"] .stRadio label:has(input[type="radio"]:checked) {
+        background-color: #4a90e2 !important;
+        color: white !important;
+        border: 1.5px solid #2d6fba !important;
+        font-weight: 600 !important;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.25) !important;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # Render selected page
 if page == "Overview":
     render_overview()
