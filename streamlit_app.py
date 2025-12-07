@@ -296,8 +296,6 @@ PAGES = [
 if "page" not in st.session_state:
     st.session_state.page = "Overview"
 
-# Sidebar title
-st.sidebar.header("Navigation")
 
 # Radio with hidden label
 page = st.sidebar.radio(
