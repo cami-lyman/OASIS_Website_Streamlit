@@ -318,7 +318,7 @@ def render_data_and_graphs():
                         yerr=grp["sem"], capsize=6,
                         color=method_colors[m])
             axes[i].set_title(method_labels[m])
-            axes[i].set_ylim(0.6, 1.0)
+            axes[i].set_ylim(0.6, 0.9)
         st.pyplot(fig)
 
     ##########################################################
