@@ -48,7 +48,7 @@ def get_data(filename=None):
 # STATE INITIALIZATION
 ###############################################################
 if "mri_slice_idx" not in st.session_state:
-    st.session_state.mri_slice_idx = 0
+    st.session_state.mri_slice_idx = 85
 if "mri_view" not in st.session_state:
     st.session_state.mri_view = "Axial"
 if "mri_play" not in st.session_state:
