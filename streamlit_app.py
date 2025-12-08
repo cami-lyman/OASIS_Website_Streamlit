@@ -268,8 +268,8 @@ def render_data_and_graphs():
         "nWBV_deep_atropos": "nWBV (Deep Atropos)"
     }
     method_colors = {
-        "nWBV": "tab:orange",
-        "nWBV_brain_extraction": "tab:green",
+        "nWBV": "hotpink",
+        "nWBV_brain_extraction": "mediumseagreen",
         "nWBV_deep_atropos": "tab:blue"
     }
 
