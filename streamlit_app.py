@@ -275,14 +275,26 @@ def render_data_and_graphs():
 
     available = [m for m in volume_methods if m in df.columns]
 
+    # Custom CSS for tab styling
+    st.markdown("""
+    <style>
+    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
+        font-size: 18px;
+    }
+    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
+        background-color: rgba(0, 0, 0, 0.15);
+        border-radius: 4px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     # Create tabs for different graph types
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "Brain Volume Distributions", 
-        "Brain Volume by CDR", 
         "Average Brain Volume by CDR",
-        "Brain Volume by MMSE Scores",
-        "Brain Volume by Education",
-        "Brain Volume vs Age and Sex"
+        "Brain Volume by CDR", 
+        "Brain Volume vs Age and Sex",
+        "Brain Volume by MMSE Scores"
     ])
 
     ##########################################################
@@ -299,33 +311,19 @@ def render_data_and_graphs():
             axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
             axes[i].tick_params(labelsize=14)
             axes[i].set_ylim(0, None)  # Start at 0, let max vary
+            # Format x-axis to 2 decimal places for nWBV (Original)
+            if m == "nWBV":
+                axes[i].xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.2f}'))
         st.pyplot(fig)
+        
+        st.markdown("---")
+        st.subheader("Explanation of Data Sets and Results")
+        st.write("""Add your explanation here about the histogram distributions.""")
 
     ##########################################################
-    # TAB 2: CDR BOXPLOTS
+    # TAB 2: MEAN ± SEM PLOTS
     ##########################################################
     with tab2:
-        if "CDR" in df.columns:
-            st.subheader("Brain Volume by CDR — Boxplots")
-            fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
-            if len(available)==1: axes=[axes]
-            # Calculate common y-axis limits across all methods
-            all_data = pd.concat([df[m].dropna() for m in available])
-            ymin, ymax = all_data.min() * 0.95, all_data.max() * 1.05
-            
-            for i,m in enumerate(available):
-                sns.boxplot(x="CDR", y=m, data=df, ax=axes[i], color=method_colors[m])
-                axes[i].set_title(method_labels[m], fontsize=20)
-                axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
-                axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
-                axes[i].tick_params(labelsize=14)
-                axes[i].set_ylim(ymin, ymax)
-            st.pyplot(fig)
-
-    ##########################################################
-    # TAB 3: MEAN ± SEM PLOTS
-    ##########################################################
-    with tab3:
         st.subheader("Average Brain Volume by CDR (mean ± SEM)")
         if "CDR" in df.columns:
             fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
@@ -342,48 +340,58 @@ def render_data_and_graphs():
                 axes[i].tick_params(labelsize=14)
                 axes[i].set_ylim(0.6, 0.9)
             st.pyplot(fig)
+            
+            # Display mean and SEM values in tables
+            st.markdown("### Mean and SEM Values by CDR")
+            for m in available:
+                grp = df.groupby("CDR")[m].agg(["mean","sem"]).reset_index()
+                grp.columns = ["CDR", "Mean", "SEM"]
+                st.markdown(f"**{method_labels[m]}**")
+                st.dataframe(grp, hide_index=True)
+        
+        st.markdown("---")
+        st.subheader("Explanation of Data Sets and Results")
+        st.write("""Add your explanation here about average brain volume by CDR.""")
 
     ##########################################################
-    # TAB 4: MMSE BOXPLOTS
+    # TAB 3: CDR BOXPLOTS
+    ##########################################################
+    with tab3:
+        if "CDR" in df.columns:
+            st.subheader("Brain Volume by CDR — Boxplots")
+            fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
+            if len(available)==1: axes=[axes]
+            # Calculate common y-axis limits across all methods
+            all_data = pd.concat([df[m].dropna() for m in available])
+            ymin, ymax = all_data.min() * 0.95, all_data.max() * 1.05
+            
+            for i,m in enumerate(available):
+                sns.boxplot(x="CDR", y=m, data=df, ax=axes[i], color=method_colors[m])
+                axes[i].set_title(method_labels[m], fontsize=20)
+                axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
+                axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
+                axes[i].tick_params(labelsize=14)
+                axes[i].set_ylim(ymin, ymax)
+            st.pyplot(fig)
+            
+            # Display boxplot statistics for each CDR by method
+            st.subheader("Boxplot Statistics by CDR for Each Method")
+            for m in available:
+                st.write(f"**{method_labels[m]}:**")
+                stats_by_cdr = df.groupby("CDR")[m].describe(percentiles=[.25, .5, .75])
+                stats_display = stats_by_cdr[["min", "25%", "50%", "75%", "max"]].T
+                stats_display.index = ["Min", "Q1 (25th percentile)", "Median (50th percentile)", "Q3 (75th percentile)", "Max"]
+                st.dataframe(stats_display)
+                st.write("")
+        
+        st.markdown("---")
+        st.subheader("Explanation of Data Sets and Results")
+        st.write("""Add your explanation here about brain volume by CDR.""")
+
+    ##########################################################
+    # TAB 4: SCATTERPLOTS WITH REGRESSION LINES AND LEGEND
     ##########################################################
     with tab4:
-        mmse_cols = ["MMSE","mmse"]
-        mmse = next((c for c in mmse_cols if c in df.columns), None)
-        if mmse:
-            st.subheader("Brain Volume by MMSE — Boxplots")
-            fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
-            if len(available)==1: axes=[axes]
-            for i,m in enumerate(available):
-                sns.boxplot(x=mmse, y=m, data=df, ax=axes[i], color=method_colors[m])
-                axes[i].set_title(method_labels[m], fontsize=20)
-                axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
-                axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
-                axes[i].tick_params(labelsize=14)
-                axes[i].tick_params(axis='x', rotation=40)
-            st.pyplot(fig)
-
-    ##########################################################
-    # TAB 5: EDUCATION BOXPLOTS
-    ##########################################################
-    with tab5:
-        educ_cols=["EDUC","Education","education"]
-        educ = next((c for c in educ_cols if c in df.columns), None)
-        if educ:
-            st.subheader("Brain Volume by Education (years)")
-            fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
-            if len(available)==1: axes=[axes]
-            for i,m in enumerate(available):
-                sns.boxplot(x=educ, y=m, data=df, ax=axes[i], color=method_colors[m])
-                axes[i].set_title(method_labels[m], fontsize=20)
-                axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
-                axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
-                axes[i].tick_params(labelsize=14)
-            st.pyplot(fig)
-
-    ##########################################################
-    # TAB 6: SCATTERPLOTS WITH REGRESSION LINES AND LEGEND
-    ##########################################################
-    with tab6:
         st.subheader("Brain Volume vs Age — Scatterplots")
 
         age_col = next((c for c in ["AGE","Age","age"] if c in df.columns), None)
@@ -414,24 +422,49 @@ def render_data_and_graphs():
                 axes[i].scatter(d[age_col], d[m], c=colors, edgecolor='k', alpha=0.8)
 
                 # regression (classmate version)
-            for sex,color,label in [("f","red","Female"),("m","blue","Male")]:
-                sex_df = d[d[sex_col].str.lower().str.contains(sex)]
-                if len(sex_df)>1:
-                    z = np.polyfit(sex_df[age_col], sex_df[m], 1)
-                    p = np.poly1d(z)
-                    xline = np.linspace(sex_df[age_col].min(), sex_df[age_col].max(), 100)
-                    axes[i].plot(xline, p(xline), color=color, linestyle="--")
+                for sex,color,label in [("f","red","Female"),("m","blue","Male")]:
+                    sex_df = d[d[sex_col].str.lower().str.contains(sex)]
+                    if len(sex_df)>1:
+                        z = np.polyfit(sex_df[age_col], sex_df[m], 1)
+                        p = np.poly1d(z)
+                        xline = np.linspace(sex_df[age_col].min(), sex_df[age_col].max(), 100)
+                        axes[i].plot(xline, p(xline), color=color, linestyle="--")
 
-            axes[i].legend(handles=[female_handle, male_handle], fontsize=14)
-            axes[i].set_title(method_labels[m], fontsize=20)
-            axes[i].set_xlabel(age_col, fontsize=16)
-            axes[i].set_ylabel("Brain Volume", fontsize=16)
-            axes[i].tick_params(labelsize=14)
-            axes[i].set_ylim(ymin, ymax)
+                axes[i].legend(handles=[female_handle, male_handle], fontsize=14)
+                axes[i].set_title(method_labels[m], fontsize=20)
+                axes[i].set_xlabel(age_col, fontsize=16)
+                axes[i].set_ylabel("Brain Volume", fontsize=16)
+                axes[i].tick_params(labelsize=14)
+                axes[i].set_ylim(ymin, ymax)
 
         st.pyplot(fig)
+        
+        st.markdown("---")
+        st.subheader("Explanation of Data Sets and Results")
+        st.write("""Add your explanation here about brain volume vs age and sex.""")
 
-
+    ##########################################################
+    # TAB 5: MMSE BOXPLOTS
+    ##########################################################
+    with tab5:
+        mmse_cols = ["MMSE","mmse"]
+        mmse = next((c for c in mmse_cols if c in df.columns), None)
+        if mmse:
+            st.subheader("Brain Volume by MMSE — Boxplots")
+            fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
+            if len(available)==1: axes=[axes]
+            for i,m in enumerate(available):
+                sns.boxplot(x=mmse, y=m, data=df, ax=axes[i], color=method_colors[m])
+                axes[i].set_title(method_labels[m], fontsize=20)
+                axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
+                axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
+                axes[i].tick_params(labelsize=14)
+                axes[i].tick_params(axis='x', rotation=40)
+            st.pyplot(fig)
+        
+        st.markdown("---")
+        st.subheader("Explanation of Data Sets and Results")
+        st.write("""Add your explanation here about brain volume by MMSE scores.""")
 ###############################################################
 # PAGE: CONCLUSIONS
 ###############################################################
