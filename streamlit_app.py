@@ -258,6 +258,43 @@ def render_data_and_graphs():
 
         st.pyplot(fig)
 
+
+    # -------------------------------------------------------------------------
+# AVERAGE BRAIN VOLUME BY CDR (mean ± SEM) — Comparing Methods
+# -------------------------------------------------------------------------
+st.subheader("Average Brain Volume by CDR (mean ± SEM) — Comparing Methods")
+
+if "CDR" not in df_local.columns:
+    st.warning("Dataset does not contain `CDR` column.")
+else:
+    try:
+        fig, axes = plt.subplots(1, len(available_methods), figsize=(9 * len(available_methods), 6))
+        if len(available_methods) == 1:
+            axes = [axes]
+
+        for idx, method in enumerate(available_methods):
+            # Compute mean & SEM grouped by CDR
+            grp = df_local.groupby("CDR")[method].agg(["mean", "sem"]).reset_index()
+
+            axes[idx].bar(
+                grp["CDR"].astype(str),
+                grp["mean"],
+                yerr=grp["sem"],
+                capsize=6,
+                color=method_colors[method]
+            )
+
+            axes[idx].set_title(method_labels[method], fontsize=16)
+            axes[idx].set_xlabel("CDR", fontsize=14)
+            axes[idx].set_ylabel("Average Brain Volume", fontsize=14)
+            axes[idx].tick_params(axis='both', labelsize=12)
+
+        plt.tight_layout()
+        st.pyplot(fig)
+
+    except Exception as e:
+        st.error(f"Unable to render mean ± SEM plots: {e}")
+
     # ------------------------------
     # SCATTERPLOTS (with legend)
     # ------------------------------
