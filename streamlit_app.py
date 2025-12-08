@@ -283,7 +283,10 @@ def render_data_and_graphs():
     if len(available)==1: axes=[axes]
     for i,m in enumerate(available):
         sns.histplot(df[m].dropna(), bins=20, ax=axes[i], color=method_colors[m])
-        axes[i].set_title(method_labels[m])
+        axes[i].set_title(method_labels[m], fontsize=20)
+        axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
+        axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
+        axes[i].tick_params(labelsize=14)
         axes[i].set_ylim(0, None)  # Start at 0, let max vary
     st.pyplot(fig)
 
@@ -300,7 +303,10 @@ def render_data_and_graphs():
         
         for i,m in enumerate(available):
             sns.boxplot(x="CDR", y=m, data=df, ax=axes[i], color=method_colors[m])
-            axes[i].set_title(method_labels[m])
+            axes[i].set_title(method_labels[m], fontsize=20)
+            axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
+            axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
+            axes[i].tick_params(labelsize=14)
             axes[i].set_ylim(ymin, ymax)
         st.pyplot(fig)
 
@@ -317,7 +323,10 @@ def render_data_and_graphs():
             axes[i].bar(grp["CDR"].astype(str), grp["mean"],
                         yerr=grp["sem"], capsize=6,
                         color=method_colors[m])
-            axes[i].set_title(method_labels[m])
+            axes[i].set_title(method_labels[m], fontsize=20)
+            axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
+            axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
+            axes[i].tick_params(labelsize=14)
             axes[i].set_ylim(0.6, 0.9)
         st.pyplot(fig)
 
@@ -332,8 +341,10 @@ def render_data_and_graphs():
         if len(available)==1: axes=[axes]
         for i,m in enumerate(available):
             sns.boxplot(x=mmse, y=m, data=df, ax=axes[i], color=method_colors[m])
-            axes[i].set_title(method_labels[m])
-            axes[i].set_ylim(0.6, 1.0)
+            axes[i].set_title(method_labels[m], fontsize=20)
+            axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
+            axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
+            axes[i].tick_params(labelsize=14)
             axes[i].tick_params(axis='x', rotation=40)
         st.pyplot(fig)
 
@@ -348,8 +359,10 @@ def render_data_and_graphs():
         if len(available)==1: axes=[axes]
         for i,m in enumerate(available):
             sns.boxplot(x=educ, y=m, data=df, ax=axes[i], color=method_colors[m])
-            axes[i].set_title(method_labels[m])
-            axes[i].set_ylim(0.6, 1.0)
+            axes[i].set_title(method_labels[m], fontsize=20)
+            axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
+            axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
+            axes[i].tick_params(labelsize=14)
         st.pyplot(fig)
 
     ##########################################################
@@ -393,10 +406,11 @@ def render_data_and_graphs():
                     xline = np.linspace(sex_df[age_col].min(), sex_df[age_col].max(), 100)
                     axes[i].plot(xline, p(xline), color=color, linestyle="--")
 
-            axes[i].legend(handles=[female_handle, male_handle])
-            axes[i].set_title(method_labels[m])
-            axes[i].set_xlabel(age_col)
-            axes[i].set_ylabel("Brain Volume")
+            axes[i].legend(handles=[female_handle, male_handle], fontsize=14)
+            axes[i].set_title(method_labels[m], fontsize=20)
+            axes[i].set_xlabel(age_col, fontsize=16)
+            axes[i].set_ylabel("Brain Volume", fontsize=16)
+            axes[i].tick_params(labelsize=14)
             axes[i].set_ylim(ymin, ymax)
 
         st.pyplot(fig)
