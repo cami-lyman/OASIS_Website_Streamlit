@@ -311,10 +311,6 @@ def render_data_and_graphs():
     if "CDR" in df.columns:
         fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
         if len(available)==1: axes=[axes]
-
-        # Calculate common y-axis limits
-        all_means = pd.concat([df.groupby("CDR")[m].mean() for m in available])
-        ymin, ymax = all_means.min() * 0.95, all_means.max() * 1.05
         
         for i,m in enumerate(available):
             grp = df.groupby("CDR")[m].agg(["mean","sem"]).reset_index()
@@ -322,7 +318,7 @@ def render_data_and_graphs():
                         yerr=grp["sem"], capsize=6,
                         color=method_colors[m])
             axes[i].set_title(method_labels[m])
-            axes[i].set_ylim(ymin, ymax)
+            axes[i].set_ylim(0.6, 1.0)
         st.pyplot(fig)
 
     ##########################################################
