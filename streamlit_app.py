@@ -296,7 +296,6 @@ def render_data_and_graphs():
         for i,m in enumerate(available):
             sns.boxplot(x="CDR", y=m, data=df, ax=axes[i], color=method_colors[m])
             axes[i].set_title(method_labels[m])
-            axes[i].set_ylim(0.6, 1.0)
         st.pyplot(fig)
 
     ##########################################################
