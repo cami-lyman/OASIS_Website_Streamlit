@@ -98,6 +98,10 @@ if "play" not in st.session_state:
 def update_slice():
     st.session_state.slice_index = st.session_state.slice_slider
 
+def update_mri_slice():
+    st.session_state.mri_slice_idx = st.session_state.mri_slider
+    st.session_state.mri_play = False
+
 
 def render_overview():
     st.title('Examining the Relationship between Brain Volume and Dementia Diagnoses')
@@ -164,22 +168,214 @@ def render_overview():
     
     # Auto-advance if playing
     if st.session_state.play:
-        time.sleep(0.2)
+        time.sleep(0.15)
         st.session_state.slice_index = (st.session_state.slice_index + 1) % (max_idx + 1)
         st.rerun()
 
 def render_oasis():
     st.header('OASIS', divider='blue')
-    st.write('Explain the OASIS project and dataset here.')
+    st.write("""
+    The Open Access Series of Imaging Studies (OASIS) is a project aimed at making neuroimaging 
+    datasets freely available to the scientific community. The data includes MRI scans from hundreds 
+    of subjects across the adult lifespan.
+    """)
+    
+    st.subheader("3D MRI Scan Viewer")
+    
+    # Try to load the HDR/IMG file pair
+    try:
+        import nibabel as nib
+        
+        hdr_path = Path(__file__).parent / "data/OAS1_0001_MR1_mpr_n4_anon_111_t88_gfc.hdr"
+        
+        if not hdr_path.exists():
+            st.warning("MRI scan file not found.")
+            return
+            
+        # Load the 3D MRI volume
+        img = nib.load(str(hdr_path))
+        data = img.get_fdata()
+        
+        # Remove singleton dimensions and ensure we have a 3D volume
+        data = np.squeeze(data)
+        
+        # Handle different possible orientations
+        if data.ndim == 2:
+            # If 2D after squeeze, add a dimension
+            data = data[:, :, np.newaxis]
+        elif data.ndim != 3:
+            st.error(f"Unexpected data dimensions: {data.shape}")
+            return
+        
+        # Initialize view orientation if not exists
+        if "mri_view" not in st.session_state:
+            st.session_state.mri_view = "Axial"
+        
+        # View selection buttons
+        col1, col2, col3 = st.columns(3)
+        if col1.button("Axial", width="stretch", type="primary" if st.session_state.mri_view == "Axial" else "secondary"):
+            st.session_state.mri_view = "Axial"
+            st.session_state.mri_play = False
+        if col2.button("Sagittal", width="stretch", type="primary" if st.session_state.mri_view == "Sagittal" else "secondary"):
+            st.session_state.mri_view = "Sagittal"
+            st.session_state.mri_play = False
+        if col3.button("Coronal", width="stretch", type="primary" if st.session_state.mri_view == "Coronal" else "secondary"):
+            st.session_state.mri_view = "Coronal"
+            st.session_state.mri_play = False
+        
+        # Determine slice parameters based on view
+        if st.session_state.mri_view == "Axial":
+            num_slices = data.shape[2]
+            slice_axis = 2
+        elif st.session_state.mri_view == "Sagittal":
+            num_slices = data.shape[0]
+            slice_axis = 0
+        else:  # Coronal
+            num_slices = data.shape[1]
+            slice_axis = 1
+        
+        # Initialize slice index if not exists
+        if "mri_slice_idx" not in st.session_state:
+            st.session_state.mri_slice_idx = num_slices // 2
+        
+        # Initialize play state for OASIS viewer
+        if "mri_play" not in st.session_state:
+            st.session_state.mri_play = False
+        
+        # Reset slice index if it's out of bounds for current view
+        if st.session_state.mri_slice_idx >= num_slices:
+            st.session_state.mri_slice_idx = num_slices // 2
+        
+        # Play controls
+        col1, col2, col3 = st.columns([1, 1, 1])
+        if col1.button("◀ Prev ", key="mri_prev"):
+            st.session_state.mri_slice_idx = max(0, st.session_state.mri_slice_idx - 1)
+            st.session_state.mri_play = False
+        
+        play_label = "⏸ Pause " if st.session_state.mri_play else "▶ Play "
+        if col2.button(play_label, key="mri_play_btn"):
+            st.session_state.mri_play = not st.session_state.mri_play
+        
+        if col3.button(" Next ▶", key="mri_next"):
+            st.session_state.mri_slice_idx = min(num_slices - 1, st.session_state.mri_slice_idx + 1)
+            st.session_state.mri_play = False
+        
+        # Slider to navigate through slices (continuous updates)
+        st.slider(
+            f"Select MRI Slice ({st.session_state.mri_view} View)",
+            0,
+            num_slices - 1,
+            value=st.session_state.mri_slice_idx,
+            key="mri_slider",
+            on_change=update_mri_slice
+        )
+        
+        # Use the session state value for display
+        slice_idx = st.session_state.mri_slice_idx
+        
+        # Extract the slice based on the axis
+        if slice_axis == 0:
+            slice_data = data[slice_idx, :, :]
+        elif slice_axis == 1:
+            slice_data = data[:, slice_idx, :]
+        else:  # slice_axis == 2
+            slice_data = data[:, :, slice_idx]
+        
+        # Create matplotlib figure 
+        fig, ax = plt.subplots(figsize=(2, 2))
+        ax.imshow(slice_data.T, cmap='twilight_shifted', origin='lower')
+        ax.set_title(f'MRI Slice {slice_idx}', fontsize=10)
+        ax.axis('off')
+        st.pyplot(fig, width='content')
+        
+        # Show volume dimensions
+        st.info(f"Volume dimensions: {data.shape[0]} × {data.shape[1]} × {data.shape[2]} voxels")
+        
+        # Auto-advance if playing
+        if st.session_state.mri_play:
+            time.sleep(0.15)
+            st.session_state.mri_slice_idx = (st.session_state.mri_slice_idx + 1) % num_slices
+            st.rerun()
+        
+    except ImportError:
+        st.error("nibabel library is required to load MRI files. Install it with: `pip install nibabel`")
+    except Exception as e:
+        st.error(f"Unable to load MRI scan: {e}")
 
 def render_code():
-    st.header('Code', divider='blue')
-    st.write('Below is the current app source:')
-    try:
-        src = Path(__file__).read_text()
-        st.code(src, language='python')
-    except Exception:
-        st.warning('Unable to load source code preview.')
+    st.header('Code for Show', divider='blue')
+    st.write('Key code snippets demonstrating the analysis techniques used in this project.')
+    
+    st.subheader('Data Loading and Preprocessing')
+    st.code('''
+import pandas as pd
+import numpy as np
+
+# Load OASIS dataset
+df = pd.read_csv('data/final_data_oasis.csv')
+
+# Compare three brain volume normalization methods
+volume_methods = ['nWBV', 'nWBV_brain_extraction', 'nWBV_deep_atropos']
+''', language='python')
+    
+    st.subheader('Statistical Analysis')
+    st.code('''
+# Calculate correlation between brain volume and cognitive scores
+from scipy.stats import pearsonr
+
+correlation, p_value = pearsonr(df['nWBV'], df['MMSE'])
+print(f"Correlation: {correlation:.3f}, p-value: {p_value:.4f}")
+
+# Group analysis by Clinical Dementia Rating (CDR)
+grouped = df.groupby('CDR')['nWBV'].agg(['mean', 'std', 'count'])
+''', language='python')
+    
+    st.subheader('Data Visualization')
+    st.code('''
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Create boxplot comparing brain volumes by dementia severity
+fig, ax = plt.subplots(figsize=(10, 6))
+sns.boxplot(x='CDR', y='nWBV', data=df, ax=ax)
+ax.set_xlabel('Clinical Dementia Rating')
+ax.set_ylabel('Normalized Brain Volume')
+plt.tight_layout()
+''', language='python')
+    
+    st.subheader('Linear Regression Analysis')
+    st.code('''
+# Fit regression line for age vs brain volume
+coefficients = np.polyfit(df['AGE'], df['nWBV'], 1)
+slope, intercept = coefficients
+
+# Calculate R-squared
+predictions = np.poly1d(coefficients)(df['AGE'])
+residuals = df['nWBV'] - predictions
+ss_res = np.sum(residuals ** 2)
+ss_tot = np.sum((df['nWBV'] - df['nWBV'].mean()) ** 2)
+r_squared = 1 - (ss_res / ss_tot)
+
+print(f"Equation: y = {slope:.4f}x + {intercept:.4f}")
+print(f"R² = {r_squared:.3f}")
+''', language='python')
+    
+    st.subheader('3D MRI Data Processing')
+    st.code('''
+import nibabel as nib
+
+# Load 3D MRI scan
+img = nib.load('data/OAS1_0001_MR1.hdr')
+data = img.get_fdata()
+
+# Extract slice for visualization
+slice_idx = data.shape[2] // 2  # Middle slice
+slice_data = data[:, :, slice_idx]
+
+# Display with custom colormap
+plt.imshow(slice_data.T, cmap='twilight_shifted', origin='lower')
+plt.axis('off')
+''', language='python')
 
 def render_data_and_graphs():
     st.header('Data & Graphs', divider='blue')
@@ -302,6 +498,68 @@ def render_data_and_graphs():
     else:
         st.warning('Dataset does not contain `CDR` column.')
 
+    # Boxplots: Brain Volume by MMSE
+    st.subheader('Brain Volume by MMSE (Mini-Mental State Examination) — Comparing Methods')
+    mmse_cols = ['MMSE', 'mmse', 'MiniMentalStateExamination']
+    mmse_col = next((c for c in mmse_cols if c in df_local.columns), None)
+    
+    if mmse_col is not None:
+        try:
+            fig, axes = plt.subplots(1, len(available_methods), figsize=(9*len(available_methods), 6))
+            if len(available_methods) == 1:
+                axes = [axes]
+            
+            for idx, method in enumerate(available_methods):
+                df_plot = df_local[[mmse_col, method]].dropna()
+                
+                # Create MMSE score groups for better visualization
+                # MMSE ranges: 0-23 (severe), 24-27 (mild), 28-30 (normal)
+                sns.boxplot(x=mmse_col, y=method, data=df_plot, ax=axes[idx], color=method_colors[method])
+                
+                axes[idx].set_xlabel('MMSE Score', fontsize=14)
+                axes[idx].set_ylabel('Brain Volume', fontsize=14)
+                axes[idx].set_title(method_labels[method], fontsize=16)
+                axes[idx].tick_params(axis='both', labelsize=12)
+                # Rotate x-axis labels if there are many unique values
+                if df_plot[mmse_col].nunique() > 10:
+                    axes[idx].tick_params(axis='x', rotation=45)
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+        except Exception as e:
+            st.error(f'Unable to render MMSE boxplots: {e}')
+    else:
+        st.info('MMSE column not found in dataset. Skipping MMSE analysis.')
+
+    # Boxplots: Brain Volume by Education Level
+    st.subheader('Brain Volume by Education Level (years) — Comparing Methods')
+    educ_cols = ['EDUC', 'Educ', 'Education', 'education', 'educ', 'YearsEducation']
+    educ_col = next((c for c in educ_cols if c in df_local.columns), None)
+    
+    if educ_col is not None:
+        try:
+            fig, axes = plt.subplots(1, len(available_methods), figsize=(9*len(available_methods), 6))
+            if len(available_methods) == 1:
+                axes = [axes]
+            
+            for idx, method in enumerate(available_methods):
+                df_plot = df_local[[educ_col, method]].dropna()
+                
+                # Use education years directly for boxplot grouping
+                sns.boxplot(x=educ_col, y=method, data=df_plot, ax=axes[idx], color=method_colors[method])
+                
+                axes[idx].set_xlabel('Education Level (years)', fontsize=14)
+                axes[idx].set_ylabel('Brain Volume', fontsize=14)
+                axes[idx].set_title(method_labels[method], fontsize=16)
+                axes[idx].tick_params(axis='both', labelsize=12)
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+        except Exception as e:
+            st.error(f'Unable to render education level boxplots: {e}')
+    else:
+        st.info('Education column not found in dataset. Skipping education analysis.')
+
     # Scatterplots: Brain Volume vs Age, colored by sex
     st.subheader('Brain Volume vs Age (scatter) — Comparing Methods')
     age_cols = ['AGE', 'Age', 'age']
@@ -329,11 +587,47 @@ def render_data_and_graphs():
                 df_plot = df_local[[age_col, method, sex_col]].dropna()
                 colors = df_plot[sex_col].map(_sex_color)
                 
-                axes[idx].scatter(df_plot[age_col], df_plot[method], c=colors, alpha=0.8, edgecolor='k')
+                # Scatter plot for females and males separately for legend
+                df_female = df_plot[df_plot[sex_col].str.strip().str.lower().isin(['f', 'female'])]
+                df_male = df_plot[df_plot[sex_col].str.strip().str.lower().isin(['m', 'male'])]
+                
+                axes[idx].scatter(df_female[age_col], df_female[method], c='red', alpha=0.8, edgecolor='k', label='Female', s=50)
+                axes[idx].scatter(df_male[age_col], df_male[method], c='blue', alpha=0.8, edgecolor='k', label='Male', s=50)
+                
+                # Add lines of best fit for males and females
+                legend_lines = []
+                for sex_val, color, label in [('f', 'red', 'Female'), ('m', 'blue', 'Male')]:
+                    df_sex = df_plot[df_plot[sex_col].str.strip().str.lower().isin([sex_val, label.lower()])]
+                    if len(df_sex) > 1:
+                        # Calculate line of best fit
+                        z = np.polyfit(df_sex[age_col], df_sex[method], 1)
+                        p = np.poly1d(z)
+                        
+                        # Calculate R-squared
+                        y_pred = p(df_sex[age_col])
+                        y_actual = df_sex[method]
+                        ss_res = np.sum((y_actual - y_pred) ** 2)
+                        ss_tot = np.sum((y_actual - y_actual.mean()) ** 2)
+                        r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+                        
+                        x_line = np.linspace(df_sex[age_col].min(), df_sex[age_col].max(), 100)
+                        line, = axes[idx].plot(x_line, p(x_line), color=color, linewidth=2, linestyle='--', alpha=0.7)
+                        
+                        # Create legend entry with equation
+                        slope, intercept = z[0], z[1]
+                        sign = '+' if intercept >= 0 else ''
+                        legend_lines.append(f'{label} fit: y = {slope:.4f}x {sign}{intercept:.4f} (R² = {r_squared:.3f})')
+                
                 axes[idx].set_xlabel(age_col, fontsize=14)
                 axes[idx].set_ylabel('Brain Volume', fontsize=14)
-                axes[idx].set_title(f'{method_labels[method]}\nFemale=red, Male=blue', fontsize=16)
+                axes[idx].set_title(method_labels[method], fontsize=16)
                 axes[idx].tick_params(axis='both', labelsize=12)
+                
+                # Add legend with data points and fit equations
+                handles, labels = axes[idx].get_legend_handles_labels()
+                for line_text in legend_lines:
+                    axes[idx].plot([], [], ' ', label=line_text)
+                axes[idx].legend(loc='best', fontsize=10, framealpha=0.9)
             
             plt.tight_layout()
             st.pyplot(fig)
@@ -365,7 +659,7 @@ PAGES = [
 if 'page' not in st.session_state:
     st.session_state.page = 'Overview'
 
-page = st.sidebar.radio('', PAGES, index=PAGES.index(st.session_state.page) if st.session_state.page in PAGES else 0, label_visibility='collapsed')
+page = st.sidebar.radio('Navigation Menu', PAGES, index=PAGES.index(st.session_state.page) if st.session_state.page in PAGES else 0, label_visibility='collapsed')
 if page != st.session_state.page:
     st.session_state.page = page
 
