@@ -45,42 +45,14 @@ def get_data(filename=None):
 
 
 ###############################################################
-# MRI VIEWER HELPERS
-###############################################################
-SLICE_DIR = "oasis/mri_files"
-
-@st.cache_data
-def list_slices(slice_dir):
-    try:
-        files = [f for f in os.listdir(slice_dir) if f.endswith(".png")]
-        return sorted(files)[::-1]
-    except:
-        return []
-
-@st.cache_data
-def load_image(path):
-    try:
-        return Image.open(path)
-    except:
-        return None
-
-
-###############################################################
 # STATE INITIALIZATION
 ###############################################################
-if "slice_index" not in st.session_state:
-    st.session_state.slice_index = 0
-if "play" not in st.session_state:
-    st.session_state.play = False
 if "mri_slice_idx" not in st.session_state:
     st.session_state.mri_slice_idx = 0
 if "mri_view" not in st.session_state:
     st.session_state.mri_view = "Axial"
 if "mri_play" not in st.session_state:
     st.session_state.mri_play = False
-
-def update_slice():
-    st.session_state.slice_index = st.session_state.slice_slider
 
 def update_mri_slice():
     st.session_state.mri_play = False
@@ -103,108 +75,74 @@ def render_overview():
         """)
 
     with col2:
-        st.subheader("MRI Slice Viewer (2D)")
-        slice_files = list_slices(SLICE_DIR)
-        if not slice_files:
-            st.warning("No MRI slices found.")
-            return
-
-        max_idx = len(slice_files) - 1
-        c1, c2, c3 = st.columns([1,1,1])
-
-        if c1.button("◀ Prev"):
-            st.session_state.slice_index = max(0, st.session_state.slice_index - 1)
-            st.session_state.play = False
-
-        if c2.button("⏯ Play/Pause"):
-            st.session_state.play = not st.session_state.play
-
-        if c3.button("Next ▶"):
-            st.session_state.slice_index = min(max_idx, st.session_state.slice_index + 1)
-            st.session_state.play = False
-
-        st.slider("Slice", 0, max_idx,
-                  key="slice_slider",
-                  value=st.session_state.slice_index,
-                  on_change=update_slice)
-
-        img = load_image(os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index]))
-        st.image(img, caption=f"Slice {st.session_state.slice_index}", width="stretch")
-
-    if st.session_state.play:
-        time.sleep(0.15)
-        st.session_state.slice_index = (st.session_state.slice_index + 1) % (max_idx + 1)
-        st.rerun()
-    
-    # 3D MRI Viewer Section
-    st.subheader("3D MRI Viewer")
-    if not MRI_ENABLED:
-        st.warning("nibabel not installed — 3D MRI viewer unavailable.")
-    else:
-        hdr_path = Path(__file__).parent / "data/OAS1_0001_MR1_mpr_n4_anon_111_t88_gfc.hdr"
-        if not hdr_path.exists():
-            st.warning("HDR MRI file missing.")
+        st.subheader("3D MRI Viewer")
+        if not MRI_ENABLED:
+            st.warning("nibabel not installed — 3D MRI viewer unavailable.")
         else:
-            try:
-                img = nib.load(str(hdr_path))
-                data = np.squeeze(img.get_fdata())
-                
-                # Buttons for choosing view
-                c1, c2, c3 = st.columns(3)
-                if c1.button("Axial", key="overview_axial"):
-                    st.session_state.mri_view = "Axial"
-                    st.session_state.mri_play = False
-                if c2.button("Sagittal", key="overview_sagittal"):
-                    st.session_state.mri_view = "Sagittal"
-                    st.session_state.mri_play = False
-                if c3.button("Coronal", key="overview_coronal"):
-                    st.session_state.mri_view = "Coronal"
-                    st.session_state.mri_play = False
-                
-                # Determine slice axis
-                if st.session_state.mri_view == "Axial":
-                    slice_axis = 2
-                elif st.session_state.mri_view == "Sagittal":
-                    slice_axis = 0
-                else:
-                    slice_axis = 1
-                
-                num_slices = data.shape[slice_axis]
-                
-                # Navigation
-                c1, c2, c3 = st.columns([1,1,1])
-                if c1.button("◀ Prev Slice", key="overview_prev"):
-                    st.session_state.mri_slice_idx = max(0, st.session_state.mri_slice_idx - 1)
-                if c2.button("⏯ Play/Pause 3D", key="overview_play"):
-                    st.session_state.mri_play = not st.session_state.mri_play
-                if c3.button("Next ▶ Slice", key="overview_next"):
-                    st.session_state.mri_slice_idx = min(num_slices - 1, st.session_state.mri_slice_idx + 1)
-                
-                st.slider(f"{st.session_state.mri_view} Slice",
-                          0, num_slices - 1,
-                          key="overview_mri_slider",
-                          value=st.session_state.mri_slice_idx,
-                          on_change=update_mri_slice)
-                
-                # Extract slice
-                if slice_axis == 0:
-                    slice_data = data[st.session_state.mri_slice_idx,:,:]
-                elif slice_axis == 1:
-                    slice_data = data[:,st.session_state.mri_slice_idx,:]
-                else:
-                    slice_data = data[:,:,st.session_state.mri_slice_idx]
-                
-                fig, ax = plt.subplots(figsize=(3,3))
-                ax.imshow(slice_data.T, cmap="twilight_shifted", origin="lower")
-                ax.axis("off")
-                st.pyplot(fig)
-                
-                if st.session_state.mri_play:
-                    time.sleep(0.10)
-                    st.session_state.mri_slice_idx = (st.session_state.mri_slice_idx + 1) % num_slices
-                    st.rerun()
-            except Exception as e:
-                st.error(f"Could not load MRI file: {e}")
+            hdr_path = Path(__file__).parent / "data/OAS1_0001_MR1_mpr_n4_anon_111_t88_gfc.hdr"
+            if not hdr_path.exists():
+                st.warning("HDR MRI file missing.")
+            else:
+                try:
+                    img = nib.load(str(hdr_path))
+                    data = np.squeeze(img.get_fdata())
+                    
+                    # Buttons for choosing view
+                    c1, c2, c3 = st.columns(3)
+                    if c1.button("Axial", key="overview_axial"):
+                        st.session_state.mri_view = "Axial"
+                        st.session_state.mri_play = False
+                    if c2.button("Sagittal", key="overview_sagittal"):
+                        st.session_state.mri_view = "Sagittal"
+                        st.session_state.mri_play = False
+                    if c3.button("Coronal", key="overview_coronal"):
+                        st.session_state.mri_view = "Coronal"
+                        st.session_state.mri_play = False
+                    
+                    # Determine slice axis
+                    if st.session_state.mri_view == "Axial":
+                        slice_axis = 2
+                    elif st.session_state.mri_view == "Sagittal":
+                        slice_axis = 0
+                    else:
+                        slice_axis = 1
+                    
+                    num_slices = data.shape[slice_axis]
+                    
+                    # Navigation
+                    c1, c2, c3 = st.columns([1,1,1])
+                    if c1.button("◀ Prev Slice", key="overview_prev"):
+                        st.session_state.mri_slice_idx = max(0, st.session_state.mri_slice_idx - 1)
+                    if c2.button("⏯ Play/Pause 3D", key="overview_play"):
+                        st.session_state.mri_play = not st.session_state.mri_play
+                    if c3.button("Next ▶ Slice", key="overview_next"):
+                        st.session_state.mri_slice_idx = min(num_slices - 1, st.session_state.mri_slice_idx + 1)
+                    
+                    st.slider(f"{st.session_state.mri_view} Slice",
+                              0, num_slices - 1,
+                              key="overview_mri_slider",
+                              value=st.session_state.mri_slice_idx,
+                              on_change=update_mri_slice)
+                    
+                    # Extract slice
+                    if slice_axis == 0:
+                        slice_data = data[st.session_state.mri_slice_idx,:,:]
+                    elif slice_axis == 1:
+                        slice_data = data[:,st.session_state.mri_slice_idx,:]
+                    else:
+                        slice_data = data[:,:,st.session_state.mri_slice_idx]
+                    
+                    fig, ax = plt.subplots(figsize=(3,3))
+                    ax.imshow(slice_data.T, cmap="twilight_shifted", origin="lower")
+                    ax.axis("off")
+                    st.pyplot(fig)
+                    
+                    if st.session_state.mri_play:
+                        time.sleep(0.10)
+                        st.session_state.mri_slice_idx = (st.session_state.mri_slice_idx + 1) % num_slices
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Could not load MRI file: {e}")
 
 
 ###############################################################
