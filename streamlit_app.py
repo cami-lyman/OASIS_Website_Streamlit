@@ -138,7 +138,7 @@ def render_overview():
 # OASIS PAGE
 # ------------------------------------------------------------------------
 def render_oasis():
-    st.header("OASIS", divider="blue")
+    st.header("OASIS")
 
     st.subheader("About the OASIS Project")
     st.write("""
@@ -311,8 +311,44 @@ def render_data_and_graphs():
 # CONCLUSIONS
 # ------------------------------------------------------------------------
 def render_conclusions():
-    st.header("Conclusions", divider="blue")
-    st.write("Summarize findings here.")
+    st.header('Conclusions')
+
+    st.write("""
+    Using the brain extraction algorithm, we found that participants without dementia showed 
+    **greater mean brain volume** than those with dementia. However, we did not observe a 
+    statistically significant difference in mean brain volume *between* different severities 
+    of dementia. 
+
+    In contrast, the deep Atropos method did not reveal significant differences in brain volume 
+    between any of the participant groups. Even so, both methods demonstrated a **general trend 
+    of decreasing brain volume with increasing dementia severity**, as illustrated by our 
+    box-and-whisker plots. Notably, the most severe dementia group exhibited a **much narrower 
+    range of brain volumes**, suggesting reduced variability in late-stage disease.
+    """)
+
+    st.subheader("Comparison of Brain Volume Estimation Methods")
+    st.write("""
+    When comparing the two measurement approaches, the **brain extraction model** produced more 
+    interpretable results and clearer volumetric trends than the deep Atropos model. This suggests 
+    that brain extraction may be better suited for studies focusing on whole-brain volume changes.
+    
+    In future work, we aim to compute brain volume from **raw MRI scans** rather than relying on 
+    ATLAS-registered images. Because template registration involves warping, this transformation 
+    may distort true anatomical differences, potentially influencing our results.
+    """)
+
+    st.subheader("Future Directions")
+    st.write("""
+    Future research could investigate how brain volume changes over time within individuals. 
+    Analyzing longitudinal trajectories of brain volume and comparing them to changes in CDR 
+    scores could offer deeper insight into disease progression.
+
+    To support such analyses, the **OASIS-2 dataset** is an excellent candidate, as it includes 
+    multiple MRI sessions taken at least one year apart for each participant. Studying temporal 
+    patterns could reveal whether brain volume decline accelerates as dementia worsens or 
+    whether the rate of decline varies across individuals.
+    """)
+
 
 # ------------------------------------------------------------------------
 # REFERENCES
