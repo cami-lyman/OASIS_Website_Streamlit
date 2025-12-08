@@ -83,11 +83,8 @@ def update_slice():
     st.session_state.slice_index = st.session_state.slice_slider
 
 def update_mri_slice():
-    st.session_state.mri_slice_idx = st.session_state.mri_slider
     st.session_state.mri_play = False
-
-    st.session_state.mri_play = False
-    st.session_state.mri_slice_idx = st.session_state.mri_slider
+    st.session_state.mri_slice_idx = st.session_state.overview_mri_slider
 
 
 ###############################################################
