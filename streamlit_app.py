@@ -277,12 +277,12 @@ def render_data_and_graphs():
 
     # Create tabs for different graph types
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "📊 Histograms", 
-        "📦 CDR Boxplots", 
-        "📈 Mean ± SEM",
-        "📦 MMSE Boxplots",
-        "📦 Education Boxplots",
-        "🔵 Age Scatterplots"
+        "Brain Volume Distributions", 
+        "Brain Volume by CDR", 
+        "Average Brain Volume by CDR",
+        "Brain Volume by MMSE Scores",
+        "Brain Volume by Education",
+        "Brain Volume vs Age and Sex"
     ])
 
     ##########################################################
