@@ -130,7 +130,7 @@ def render_overview():
         st.image(img, caption=f"Slice {st.session_state.slice_index}", width="stretch")
 
     if st.session_state.play:
-        time.sleep(0.2)
+        time.sleep(0.08)
         st.session_state.slice_index = (st.session_state.slice_index + 1) % (max_idx + 1)
         st.rerun()
 
@@ -138,8 +138,46 @@ def render_overview():
 # OASIS PAGE
 # ------------------------------------------------------------------------
 def render_oasis():
-    st.header('OASIS', divider='blue')
-    st.write('Explain the OASIS project and dataset here.')
+    st.header("OASIS", divider="blue")
+
+    st.subheader("About the OASIS Project")
+    st.write("""
+    In their words, *“The Open Access Series of Imaging Studies (OASIS) is a project aimed at 
+    making neuroimaging data sets of the brain freely available to the scientific community. 
+    By compiling and freely distributing neuroimaging data sets, we hope to facilitate future 
+    discoveries in basic and clinical neuroscience,”* [5].
+
+    The data in these datasets are gathered from the Knight ADRC and affiliated studies. 
+    Participants include both men and women, and the dataset controls for handedness by 
+    including only right-handed participants. Although handedness does not affect total 
+    brain volume, it does influence hemispheric asymmetry patterns, which could matter for 
+    studies exploring lateralized features of the brain [6].
+    """)
+
+    st.subheader("Dataset Used")
+    st.write("""
+    For our project, we used the **OASIS-1** dataset, which includes **416 participants** 
+    aged **18 to 96**. Each participant contributed **three to four T1-weighted MRI scans** 
+    taken during the same imaging session. Of the 416 participants, 100 were clinically diagnosed with dementia,
+    and 20 non-demented participants were imaged on a subsequent visit within 90 days of the initial session to use as a reliability dataset.
+    """)
+
+    st.subheader("Available Participant Metadata")
+    st.write("""
+    In addition to the brain scans, sex, handedness, age, education level, socioeconomic status, MMSE, CDR, estimated total intracranial volume, normalized whole brain volume, and ATLAS scaling factor were recorded for each participant. CDR and MMSE are tools used to gauge the stage of dementia. We chose to focus on CDR. To obtain CDR, physicians conduct a semi-structured interview with the patient and a reliable informant such as a family member to assess six domains of cognitive and functional performance: Memory, Orientation, Judgment & Problem Solving, Community Affairs, Home & Hobbies, and Personal Care. A higher score means more severe dementia. The OASIS study used atlas scaling to account for differences in head size before calculating the normalized whole brain volume for each participant.
+
+    """)
+
+    st.subheader("MRI Data Used")
+    st.write("""
+    We used the **gain field–corrected, ATLAS-registered transverse brain scans** for all analyses. 
+    ATLAS registration normalizes participants' head sizes, enabling more reliable comparisons of brain volume 
+    across individuals.
+
+    In the future, we hope to develop our own method for adjusting for head size rather than relying solely on 
+    ATLAS scaling. Differences between natural anatomical scaling and ATLAS space could influence volumetric 
+    measurements.
+    """)
 
 # ------------------------------------------------------------------------
 # CODE PAGE
