@@ -67,59 +67,139 @@ if "play" not in st.session_state:
 
 def update_slice():
     st.session_state.slice_index = st.session_state.slice_slider
-# --------------------------------------------------------------------
-# OVERVIEW PAGE
-# --------------------------------------------------------------------
+
+# ------------------------------------------------------------------------
+# OVERVIEW PAGE — using 3D MRI viewer instead of simple slice viewer
+# ------------------------------------------------------------------------
 def render_overview():
+    st.title('Examining the Relationship between Brain Volume and Dementia Diagnoses')
+    st.write('An analysis of data provided by the OASIS project.')
 
-    st.title("Examining the Relationship between Brain Volume and Dementia Diagnoses")
-    st.write("An analysis of data provided by the OASIS project.")
+    text_col, viewer_col = st.columns([1, 1])
 
-    text_col, img_col = st.columns([1, 1])
-
-    # EXACT TEXT FROM YOUR VERSION
+    # -------------------------
+    # LEFT COLUMN — Your Text
+    # -------------------------
     with text_col:
         st.subheader("About")
         st.write("""
-        Dementia is a neurodegenerative disease which impacts millions of people...
-        [FULL TEXT FROM YOUR VERSION IS INSERTED HERE — OMITTED FOR BREVITY IN CHATGPT]
+        Dementia is a neurodegenerative disease which impacts millions of people around the world. 
+        Currently, the average time to diagnosis is 3.5 years [1]. This delay reduces the treatment 
+        options available, as many treatments that slow disease progression are only effective in the 
+        early stages. Brain MRIs may offer a way to improve early diagnosis and track disease progression, 
+        as some brain changes can be seen years before symptoms develop [2]. Neuroinflammation is a 
+        likely part of the pathogenesis of Alzheimer’s, and it can be seen on MRIs [3][4]. Additionally, 
+        loss of brain volume over time is a known feature of dementia.
+
+        Our goal was to examine the relationship between brain volume and dementia status using data 
+        from the OASIS (Open Access Series of Imaging Studies) project. The OASIS project dataset 
+        we used contained three-dimensional MRI scan files as well as information about each patient’s 
+        dementia status as measured by clinical dementia rating (CDR) and demographic information such 
+        as age and gender.
+
+        We derived the brain volume from the MRI files by slicing them into two-dimensional images, 
+        segmenting the image to calculate brain area, and adding up the brain area from each slice. 
+        We used two different deep learning models within ANTsPy to segment the brain areas: 
+        brain extraction and deep atropos. You can see more about our methods on the “Code” page. 
+        Our results can be found on the “Data & Graphs” and “Conclusions” pages.
         """)
 
-    # MRI Viewer
-    with img_col:
-        st.subheader("MRI Slice Viewer")
-        slice_files = list_slices(SLICE_DIR)
-        if not slice_files:
-            st.warning("No MRI slices found.")
-            return
+    # -------------------------
+    # RIGHT COLUMN — 3D MRI VIEWER
+    # -------------------------
+    with viewer_col:
+        st.subheader("3D MRI Viewer")
 
-        max_idx = len(slice_files) - 1
-        c1, c2, c3 = st.columns([1,1,1])
+        try:
+            import nibabel as nib
 
-        if c1.button("◀ Prev"):
-            st.session_state.slice_index = max(0, st.session_state.slice_index - 1)
-            st.session_state.play = False
+            hdr_path = Path(__file__).parent / "data/OAS1_0001_MR1_mpr_n4_anon_111_t88_gfc.hdr"
 
-        if c2.button("⏯ Play/Pause"):
-            st.session_state.play = not st.session_state.play
+            if not hdr_path.exists():
+                st.warning("MRI scan file not found in /data/. Please place the .hdr and .img pair there.")
+                return
 
-        if c3.button("Next ▶"):
-            st.session_state.slice_index = min(max_idx, st.session_state.slice_index + 1)
-            st.session_state.play = False
+            img = nib.load(str(hdr_path))
+            data = np.squeeze(img.get_fdata())
 
-        st.slider("Slice", 0, max_idx,
-                  st.session_state.slice_index,
-                  key="slice_slider",
-                  on_change=update_slice)
+            if data.ndim != 3:
+                st.error(f"Unexpected MRI volume shape: {data.shape}")
+                return
 
-        img = load_image(os.path.join(SLICE_DIR, slice_files[st.session_state.slice_index]))
-        if img:
-            st.image(img, caption=f"Slice {st.session_state.slice_index}", width="stretch")
+            # Initialize view mode
+            if "mri_view" not in st.session_state:
+                st.session_state.mri_view = "Axial"
 
-    if st.session_state.play:
-        time.sleep(0.08)
-        st.session_state.slice_index = (st.session_state.slice_index + 1) % (max_idx + 1)
-        st.rerun()
+            # View Selection Buttons
+            c1, c2, c3 = st.columns(3)
+            if c1.button("Axial", type="primary" if st.session_state.mri_view == "Axial" else "secondary"):
+                st.session_state.mri_view = "Axial"
+            if c2.button("Sagittal", type="primary" if st.session_state.mri_view == "Sagittal" else "secondary"):
+                st.session_state.mri_view = "Sagittal"
+            if c3.button("Coronal", type="primary" if st.session_state.mri_view == "Coronal" else "secondary"):
+                st.session_state.mri_view = "Coronal"
+
+            # Slice axis based on view
+            view = st.session_state.mri_view
+            if view == "Axial":
+                axis = 2
+            elif view == "Sagittal":
+                axis = 0
+            else:
+                axis = 1
+
+            num_slices = data.shape[axis]
+
+            # Initialize slice index
+            if "mri_slice_idx" not in st.session_state:
+                st.session_state.mri_slice_idx = num_slices // 2
+
+            # Play/Pause
+            if "mri_play" not in st.session_state:
+                st.session_state.mri_play = False
+
+            c1, c2, c3 = st.columns([1, 1, 1])
+            if c1.button("◀ Prev"):
+                st.session_state.mri_slice_idx = max(0, st.session_state.mri_slice_idx - 1)
+                st.session_state.mri_play = False
+
+            if c2.button("⏯ Play/Pause"):
+                st.session_state.mri_play = not st.session_state.mri_play
+
+            if c3.button("Next ▶"):
+                st.session_state.mri_slice_idx = min(num_slices - 1, st.session_state.mri_slice_idx + 1)
+                st.session_state.mri_play = False
+
+            # Slice slider
+            st.session_state.mri_slice_idx = st.slider(
+                f"{view} Slice",
+                0,
+                num_slices - 1,
+                value=st.session_state.mri_slice_idx,
+                key="mri_slice_slider"
+            )
+
+            # Extract slice for display
+            if axis == 0:
+                slice_data = data[st.session_state.mri_slice_idx, :, :]
+            elif axis == 1:
+                slice_data = data[:, st.session_state.mri_slice_idx, :]
+            else:
+                slice_data = data[:, :, st.session_state.mri_slice_idx]
+
+            fig, ax = plt.subplots(figsize=(3, 3))
+            ax.imshow(slice_data.T, cmap='twilight_shifted', origin='lower')
+            ax.axis('off')
+            st.pyplot(fig)
+
+            if st.session_state.mri_play:
+                time.sleep(0.12)
+                st.session_state.mri_slice_idx = (st.session_state.mri_slice_idx + 1) % num_slices
+                st.rerun()
+
+        except ImportError:
+            st.error("nibabel is required for this viewer. Install with: pip install nibabel")
+
 
 # --------------------------------------------------------------------
 # OASIS PAGE (YOUR EXACT TEXT)
