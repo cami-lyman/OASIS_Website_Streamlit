@@ -64,6 +64,7 @@ def update_mri_slice():
 ###############################################################
 def render_overview():
     st.title("Examining the Relationship between Brain Volume and Dementia Diagnoses")
+    st.markdown("---")
 
     col1, col2 = st.columns([1, 1])
 
@@ -169,81 +170,201 @@ def render_oasis():
 
 
 ###############################################################
-# PAGE: CODE (from classmate)
+# PAGE: CODE (from Portfolio_sample_code.ipynb)
 ###############################################################
 def render_code():
     st.header('Code for Show', divider='blue')
-    st.write('Key code snippets demonstrating the analysis techniques used in this project.')
+    st.write('Brain Volumetric Pipeline - Code demonstrating various methods of calculating and normalizing brain volume from MRI scans.')
     
-    st.subheader('Data Loading and Preprocessing')
+    st.subheader('Imports and Setup')
     st.code('''
-import pandas as pd
 import numpy as np
-
-# Load OASIS dataset
-df = pd.read_csv('data/final_data_oasis.csv')
-
-# Compare three brain volume normalization methods
-volume_methods = ['nWBV', 'nWBV_brain_extraction', 'nWBV_deep_atropos']
-''', language='python')
-    
-    st.subheader('Statistical Analysis')
-    st.code('''
-# Calculate correlation between brain volume and cognitive scores
-from scipy.stats import pearsonr
-
-correlation, p_value = pearsonr(df['nWBV'], df['MMSE'])
-print(f"Correlation: {correlation:.3f}, p-value: {p_value:.4f}")
-
-# Group analysis by Clinical Dementia Rating (CDR)
-grouped = df.groupby('CDR')['nWBV'].agg(['mean', 'std', 'count'])
-''', language='python')
-    
-    st.subheader('Data Visualization')
-    st.code('''
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# Create boxplot comparing brain volumes by dementia severity
-fig, ax = plt.subplots(figsize=(10, 6))
-sns.boxplot(x='CDR', y='nWBV', data=df, ax=ax)
-ax.set_xlabel('Clinical Dementia Rating')
-ax.set_ylabel('Normalized Brain Volume')
-plt.tight_layout()
-''', language='python')
-    
-    st.subheader('Linear Regression Analysis')
-    st.code('''
-# Fit regression line for age vs brain volume
-coefficients = np.polyfit(df['AGE'], df['nWBV'], 1)
-slope, intercept = coefficients
-
-# Calculate R-squared
-predictions = np.poly1d(coefficients)(df['AGE'])
-residuals = df['nWBV'] - predictions
-ss_res = np.sum(residuals ** 2)
-ss_tot = np.sum((df['nWBV'] - df['nWBV'].mean()) ** 2)
-r_squared = 1 - (ss_res / ss_tot)
-
-print(f"Equation: y = {slope:.4f}x + {intercept:.4f}")
-print(f"R² = {r_squared:.3f}")
-''', language='python')
-    
-    st.subheader('3D MRI Data Processing')
-    st.code('''
+import pandas as pd
 import nibabel as nib
+import matplotlib.pyplot as plt
+import os
+import ants
+from antspynet.utilities import brain_extraction
+from antspynet.utilities import deep_atropos
+import seaborn as sns
+''', language='python')
+    
+    st.subheader('Load Data Files')
+    st.code('''
+# File paths
+path = "path/to/OASIS_selected/"
+Dementia_path = "path/to/oasis_cross-sectional.csv"
 
-# Load 3D MRI scan
-img = nib.load('data/OAS1_0001_MR1.hdr')
+# Load in dataframe
+oasis_crossref = pd.read_csv(Dementia_path) 
+oasis_crossref = oasis_crossref.dropna(subset=['CDR'])
+''', language='python')
+    
+    st.subheader('Example Image Visualization')
+    st.code('''
+# Load and display an MRI scan
+path_ex = "path/to/example_brain.hdr"
+img = nib.load(path_ex)
 data = img.get_fdata()
 
-# Extract slice for visualization
-slice_idx = data.shape[2] // 2  # Middle slice
-slice_data = data[:, :, slice_idx]
-
-# Display with custom colormap
-plt.imshow(slice_data.T, cmap='twilight_shifted', origin='lower')
+# Display a middle slice
+plt.imshow(data[:, :, data.shape[2]-95], cmap='twilight_shifted') 
 plt.axis('off')
+plt.title('Example slice image of Brain')
+plt.show()
+''', language='python')
+    
+    st.subheader('Method #1: Brain Extraction')
+    st.write('Perform brain extraction using U-net and ANTs-based training data.')
+    st.code('''
+def brain_extraction_method(img):
+    """Uses Ants.brain_extract to find brain volume of inputted MRI image"""
+    
+    # Create probability map 
+    prob_brain_mask = brain_extraction(img, modality="t1", verbose=True)  
+    brain_mask = ants.threshold_image(prob_brain_mask, 0.5, 1e9, 1, 0)
+    
+    # Sum up segmented voxels
+    pixel_count = int(brain_mask.numpy().astype(bool).sum())
+    
+    # Calculate the volumes using voxel spacing 
+    voxel_volume = float(np.prod(img.spacing))
+    volume = pixel_count * voxel_volume
+    
+    return pixel_count, volume
+''', language='python')
+    
+    st.subheader('Method #2: Deep Atropos Segmentation')
+    st.write('''
+    Six-tissue segmentation using deep learning.
+    
+    Labeling:
+    - Label 0: background
+    - Label 1: CSF
+    - Label 2: gray matter
+    - Label 3: white matter
+    - Label 4: deep gray matter
+    - Label 5: brain stem
+    - Label 6: cerebellum
+    ''')
+    st.code('''
+def atropos_segmentation(img, pre):
+    """Uses deep atropos segmentation to calculate brain volume"""
+    
+    # Segment the brain
+    seg = deep_atropos(img, do_preprocessing=pre) 
+    seg_img = seg['segmentation_image']
+    seg_np = seg_img.numpy().astype(int)
+
+    # Select brain tissues (GM = 2, WM = 3, Deep GM = 4)
+    brain_tissue = ((seg_np == 2) | (seg_np == 3) | (seg_np == 4)).astype(float)
+    pixel_count = int(brain_tissue.sum())
+
+    # Calculate volume using voxel spacing
+    voxel_volume = float(np.prod(img.spacing))
+    volume = pixel_count * voxel_volume
+    
+    return pixel_count, volume
+''', language='python')
+    
+    st.subheader('Calculate Volumes for All Scans')
+    st.code('''
+# Initialize arrays
+pixel_counts_brain_extraction = np.zeros(len(Ids))
+volumes_brain_extraction = np.zeros(len(Ids))
+pixel_counts_deep_atropos = np.zeros(len(Ids))
+volumes_deep_atropos = np.zeros(len(Ids))
+
+# Loop through all brain scans
+for i in range(len(Ids)):
+    current_Id = Ids.iloc[i]
+    
+    # Load the image
+    raw_img_ants = ants.image_read(filepath, reorient='IAL')
+    raw_img_ants.set_spacing((1,1,1))
+    
+    # Run volume calculations
+    pixel_counts_brain_extraction[i], volumes_brain_extraction[i] = \\
+        brain_extraction_method(raw_img_ants)
+    
+    pixel_counts_deep_atropos[i], volumes_deep_atropos[i] = \\
+        atropos_segmentation(raw_img_ants, pre=False)
+''', language='python')
+    
+    st.subheader('Normalize Brain Volumes')
+    st.write('''
+    Normalization formula from Buckner et al. 2004:
+    
+    $$nWBV = \\frac{Vol_{atl}}{eTIV \\times ASF}$$
+    
+    Where:
+    - nWBV = Normalized Whole Brain Volume
+    - Vol_atl = Volume in ATLAS space
+    - eTIV = Estimated Total Intracranial Volume
+    - ASF = ATLAS Scaling Factor
+    ''')
+    st.code('''
+# Add volumes to dataframe
+oasis_crossref['Vol BE'] = volumes_brain_extraction
+oasis_crossref['Vol DA'] = volumes_deep_atropos
+
+# Normalize with ASF
+oasis_crossref['nWBV_brain_extraction'] = \\
+    oasis_crossref['Vol BE'] / (oasis_crossref['ASF'] * (oasis_crossref['eTIV'] * 1000))
+
+oasis_crossref['nWBV_deep_atropos'] = \\
+    oasis_crossref['Vol DA'] / (oasis_crossref['ASF'] * (oasis_crossref['eTIV'] * 1000))
+''', language='python')
+    
+    st.subheader('Visualization: CDR vs nWBV')
+    st.code('''
+# Box plot for CDR vs nWBV
+sns.boxplot(x='CDR', y='nWBV', data=Data)
+plt.xlabel('Clinical Dementia Rating')
+plt.ylabel('Normalized Whole Brain Volume')
+plt.show()
+''', language='python')
+    
+    st.subheader('Visualization: nWBV vs Age by Gender')
+    st.code('''
+# Create sub-dataframes for genders
+men = Data[Data['M/F'] == 'M']
+women = Data[Data['M/F'] == 'F']
+
+# Plot
+plt.plot(men['Age'], men['nWBV'], '.', color='blue')
+plt.plot(women['Age'], women['nWBV'], '.', color='red')
+plt.xlabel('Age (Years)')
+plt.ylabel('nWBV')
+plt.legend(['Men', 'Women'])
+plt.show()
+''', language='python')
+    
+    st.subheader('Compare Methods')
+    st.code('''
+# Compare three different methods side by side
+fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, figsize=(10, 4))
+
+# Brain extraction method
+ax1.bar(Data['CDR'], Data['nWBV_brain_extraction'], color='blue', width=0.4)
+ax1.set_title('Brain Extraction Method')
+ax1.set_xlabel('CDR')
+ax1.set_ylabel('nWBV')
+
+# Deep atropos method
+ax2.bar(Data['CDR'], Data['nWBV_deep_atropos'], color='red', width=0.4)
+ax2.set_title('Deep Atropos Method')
+ax2.set_xlabel('CDR')
+ax2.set_ylabel('nWBV')
+
+# Original OASIS nWBV
+ax3.bar(Data['CDR'], Data['nWBV'], color='purple', width=0.4)
+ax3.set_title('nWBV given by OASIS')
+ax3.set_xlabel('CDR')
+ax3.set_ylabel('nWBV')
+
+plt.tight_layout()
+plt.show()
 ''', language='python')
 
 
@@ -291,8 +412,8 @@ def render_data_and_graphs():
     # Create tabs for different graph types
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "Brain Volume Distributions", 
-        "Average Brain Volume by CDR",
-        "Brain Volume by CDR", 
+        "Brain Volume by CDR - Bar Chart",
+        "Brain Volume by CDR - Boxplot", 
         "Brain Volume vs Age and Sex",
         "Brain Volume by MMSE Scores"
     ])
@@ -301,14 +422,14 @@ def render_data_and_graphs():
     # TAB 1: HISTOGRAMS
     ##########################################################
     with tab1:
-        st.subheader("Distribution of Brain Volume — Histograms")
+        st.subheader("Distribution of Brain Volume")
         fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
         if len(available)==1: axes=[axes]
         for i,m in enumerate(available):
             sns.histplot(df[m].dropna(), bins=20, ax=axes[i], color=method_colors[m])
             axes[i].set_title(method_labels[m], fontsize=20)
-            axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
-            axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
+            axes[i].set_xlabel('Brain Volume (mm³)', fontsize=16)
+            axes[i].set_ylabel('# Participants', fontsize=16)
             axes[i].tick_params(labelsize=14)
             axes[i].set_ylim(0, None)  # Start at 0, let max vary
             # Format x-axis to 2 decimal places for nWBV (Original)
@@ -324,7 +445,7 @@ def render_data_and_graphs():
     # TAB 2: MEAN ± SEM PLOTS
     ##########################################################
     with tab2:
-        st.subheader("Average Brain Volume by CDR (mean ± SEM)")
+        st.subheader("Average Brain Volume by CDR - Bar Chart")
         if "CDR" in df.columns:
             fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
             if len(available)==1: axes=[axes]
@@ -335,8 +456,8 @@ def render_data_and_graphs():
                             yerr=grp["sem"], capsize=6,
                             color=method_colors[m])
                 axes[i].set_title(method_labels[m], fontsize=20)
-                axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
-                axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
+                axes[i].set_xlabel('CDR', fontsize=16)
+                axes[i].set_ylabel('Brain Volume (mm³)', fontsize=16)
                 axes[i].tick_params(labelsize=14)
                 axes[i].set_ylim(0.6, 0.9)
             st.pyplot(fig)
@@ -368,8 +489,8 @@ def render_data_and_graphs():
             for i,m in enumerate(available):
                 sns.boxplot(x="CDR", y=m, data=df, ax=axes[i], color=method_colors[m])
                 axes[i].set_title(method_labels[m], fontsize=20)
-                axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
-                axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
+                axes[i].set_xlabel('CDR', fontsize=16)
+                axes[i].set_ylabel('Brain Volume (mm³)', fontsize=16)
                 axes[i].tick_params(labelsize=14)
                 axes[i].set_ylim(ymin, ymax)
             st.pyplot(fig)
@@ -389,7 +510,7 @@ def render_data_and_graphs():
         st.write("""Add your explanation here about brain volume by CDR.""")
 
     ##########################################################
-    # TAB 4: SCATTERPLOTS WITH REGRESSION LINES AND LEGEND
+    # TAB 4: SCATTERPLOTS + REGRESSION LINES
     ##########################################################
     with tab4:
         st.subheader("Brain Volume vs Age — Scatterplots")
@@ -398,69 +519,158 @@ def render_data_and_graphs():
         sex_col = next((c for c in ["M/F","SEX","Sex","sex","Gender","gender"] if c in df.columns), None)
 
         if age_col and sex_col:
-            fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
-            if len(available)==1: axes=[axes]
+            fig, axes = plt.subplots(1, len(available), figsize=(8 * len(available), 5))
+            if len(available) == 1:
+                axes = [axes]
 
-            # legend handles
-            female_handle = plt.Line2D([],[], marker='o', color='red', linestyle='None', label='Female')
-            male_handle = plt.Line2D([],[], marker='o', color='blue', linestyle='None', label='Male')
+            # Legend handles
+            female_handle = plt.Line2D([], [], marker='o', color='red', linestyle='None', label='Female')
+            male_handle = plt.Line2D([], [], marker='o', color='blue', linestyle='None', label='Male')
 
             def sx(x):
-                s=str(x).strip().lower()
-                if s in ["f","female"]: return "red"
-                if s in ["m","male"]:   return "blue"
+                s = str(x).strip().lower()
+                if s in ["f", "female"]: return "red"
+                if s in ["m", "male"]: return "blue"
                 return "gray"
 
-            # Calculate common y-axis limits
-            all_data = pd.concat([df[m].dropna() for m in available])
-            ymin, ymax = all_data.min() * 0.95, all_data.max() * 1.05
-
-            for i,m in enumerate(available):
-                d = df[[age_col,m,sex_col]].dropna()
+            for i, m in enumerate(available):
+                d = df[[age_col, m, sex_col]].dropna()
                 colors = d[sex_col].map(sx)
 
-                axes[i].scatter(d[age_col], d[m], c=colors, edgecolor='k', alpha=0.8)
+                axes[i].scatter(d[age_col], d[m], c=colors, edgecolor="k", alpha=0.8)
 
-                # regression (classmate version)
-                for sex,color,label in [("f","red","Female"),("m","blue","Male")]:
-                    sex_df = d[d[sex_col].str.lower().str.contains(sex)]
-                    if len(sex_df)>1:
-                        z = np.polyfit(sex_df[age_col], sex_df[m], 1)
+                # Regression lines (without annotations)
+                for sex, color, label in [("f", "red", "Female"), ("m", "blue", "Male")]:
+                    sd = d[d[sex_col].str.lower().str.contains(sex)]
+
+                    if len(sd) > 1:
+                        # best fit line
+                        z = np.polyfit(sd[age_col], sd[m], 1)
                         p = np.poly1d(z)
-                        xline = np.linspace(sex_df[age_col].min(), sex_df[age_col].max(), 100)
-                        axes[i].plot(xline, p(xline), color=color, linestyle="--")
 
-                axes[i].legend(handles=[female_handle, male_handle], fontsize=14)
+                        # Plot regression
+                        xx = np.linspace(sd[age_col].min(), sd[age_col].max(), 100)
+                        axes[i].plot(xx, p(xx), color=color, linestyle="--")
+
                 axes[i].set_title(method_labels[m], fontsize=20)
                 axes[i].set_xlabel(age_col, fontsize=16)
-                axes[i].set_ylabel("Brain Volume", fontsize=16)
-                axes[i].tick_params(labelsize=14)
-                axes[i].set_ylim(ymin, ymax)
+                axes[i].set_ylabel("Brain Volume (mm³)", fontsize=16)
+                axes[i].legend(handles=[female_handle, male_handle], fontsize=12)
 
-        st.pyplot(fig)
-        
+            st.pyplot(fig)
+            
+            # Display regression statistics in tables
+            st.subheader("Regression Line Statistics")
+            for m in available:
+                st.write(f"**{method_labels[m]}:**")
+                d = df[[age_col, m, sex_col]].dropna()
+                
+                regression_data = []
+                for sex, label in [("f", "Female"), ("m", "Male")]:
+                    sd = d[d[sex_col].str.lower().str.contains(sex)]
+                    
+                    if len(sd) > 1:
+                        # Calculate regression
+                        z = np.polyfit(sd[age_col], sd[m], 1)
+                        slope, intercept = z[0], z[1]
+                        
+                        # Calculate R²
+                        p = np.poly1d(z)
+                        y_pred = p(sd[age_col])
+                        y_true = sd[m]
+                        ss_res = np.sum((y_true - y_pred) ** 2)
+                        ss_tot = np.sum((y_true - y_true.mean()) ** 2)
+                        r2 = 1 - ss_res / ss_tot if ss_tot != 0 else 0
+                        
+                        regression_data.append({
+                            "Sex": label,
+                            "Slope": f"{slope:.4f}",
+                            "Intercept": f"{intercept:.4f}",
+                            "Equation": f"y = {slope:.4f}x + {intercept:.4f}",
+                            "R²": f"{r2:.3f}",
+                            "Sample Size": len(sd)
+                        })
+                
+                if regression_data:
+                    reg_df = pd.DataFrame(regression_data)
+                    st.dataframe(reg_df, hide_index=True)
+                st.write("")
+
         st.markdown("---")
-        st.subheader("Explanation of Data Sets and Results")
-        st.write("""Add your explanation here about brain volume vs age and sex.""")
+        st.subheader("Explanation of Results")
+        st.write("""Add interpretation here.""")
 
     ##########################################################
-    # TAB 5: MMSE BOXPLOTS
+    # TAB 5: MMSE SCATTERPLOTS
     ##########################################################
     with tab5:
         mmse_cols = ["MMSE","mmse"]
         mmse = next((c for c in mmse_cols if c in df.columns), None)
         if mmse:
-            st.subheader("Brain Volume by MMSE — Boxplots")
+            st.subheader("Brain Volume by MMSE Scores — Scatterplots")
             fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
             if len(available)==1: axes=[axes]
+            
             for i,m in enumerate(available):
-                sns.boxplot(x=mmse, y=m, data=df, ax=axes[i], color=method_colors[m])
+                d = df[[mmse, m]].dropna()
+                
+                # Scatter plot
+                axes[i].scatter(d[mmse], d[m], color=method_colors[m], edgecolor="k", alpha=0.6)
+                
+                # Regression line
+                if len(d) > 1:
+                    z = np.polyfit(d[mmse], d[m], 1)
+                    p = np.poly1d(z)
+                    xx = np.linspace(d[mmse].min(), d[mmse].max(), 100)
+                    axes[i].plot(xx, p(xx), color="black", linestyle="--", linewidth=2)
+                
                 axes[i].set_title(method_labels[m], fontsize=20)
-                axes[i].set_xlabel(axes[i].get_xlabel(), fontsize=16)
-                axes[i].set_ylabel(axes[i].get_ylabel(), fontsize=16)
+                axes[i].set_xlabel("MMSE Score", fontsize=16)
+                axes[i].set_ylabel("Brain Volume", fontsize=16)
                 axes[i].tick_params(labelsize=14)
-                axes[i].tick_params(axis='x', rotation=40)
+                axes[i].grid(True, alpha=0.3)
+            
             st.pyplot(fig)
+            
+            # Display quartile statistics by MMSE score
+            st.subheader("Boxplot Statistics by MMSE Score for Each Method")
+            for m in available:
+                st.write(f"**{method_labels[m]}:**")
+                stats_by_mmse = df.groupby(mmse)[m].describe(percentiles=[.25, .5, .75])
+                stats_display = stats_by_mmse[["min", "25%", "50%", "75%", "max"]].T
+                stats_display.index = ["Min", "Q1 (25th percentile)", "Median (50th percentile)", "Q3 (75th percentile)", "Max"]
+                st.dataframe(stats_display)
+                st.write("")
+            
+            # Display regression statistics
+            st.subheader("Regression Line Statistics")
+            for m in available:
+                d = df[[mmse, m]].dropna()
+                
+                if len(d) > 1:
+                    # Calculate regression
+                    z = np.polyfit(d[mmse], d[m], 1)
+                    slope, intercept = z[0], z[1]
+                    
+                    # Calculate R²
+                    p = np.poly1d(z)
+                    y_pred = p(d[mmse])
+                    y_true = d[m]
+                    ss_res = np.sum((y_true - y_pred) ** 2)
+                    ss_tot = np.sum((y_true - y_true.mean()) ** 2)
+                    r2 = 1 - ss_res / ss_tot if ss_tot != 0 else 0
+                    
+                    reg_data = pd.DataFrame([{
+                        "Slope": f"{slope:.4f}",
+                        "Intercept": f"{intercept:.4f}",
+                        "Equation": f"y = {slope:.4f}x + {intercept:.4f}",
+                        "R²": f"{r2:.3f}",
+                        "Sample Size": len(d)
+                    }])
+                    
+                    st.write(f"**{method_labels[m]}:**")
+                    st.dataframe(reg_data, hide_index=True)
+                    st.write("")
         
         st.markdown("---")
         st.subheader("Explanation of Data Sets and Results")
@@ -469,7 +679,7 @@ def render_data_and_graphs():
 # PAGE: CONCLUSIONS
 ###############################################################
 def render_conclusions():
-    st.header("Conclusions")
+    st.header("Conclusions", divider="blue")
     st.write("""
     (Your full conclusions text preserved exactly)
     """)
@@ -479,7 +689,7 @@ def render_conclusions():
 # PAGE: REFERENCES
 ###############################################################
 def render_references():
-    st.header("References")
+    st.header("References", divider="blue")
     st.write("""
     (Your full references list preserved exactly)
     """)
