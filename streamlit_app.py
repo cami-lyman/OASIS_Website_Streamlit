@@ -12,14 +12,8 @@ import time
 from pathlib import Path
 from typing import List
 from PIL import Image
-
-# Optional plotting libs
-try:
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    PLOTTING_AVAILABLE = True
-except:
-    PLOTTING_AVAILABLE = False
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Optional MRI loading
 try:
