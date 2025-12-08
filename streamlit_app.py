@@ -392,7 +392,14 @@ def render_conclusions():
 # ------------------------------------------------------------------------
 def render_references():
     st.header("References", divider="blue")
-    st.write("List references here.")
+    st.write("""
+    [1] Olubunmi Kusoro, M. Roche, R. Del‐Pino‐Casado, P. Leung, and V. Orgeta, “Time to Diagnosis in Dementia: A Systematic Review With Meta‐Analysis,” International Journal of Geriatric Psychiatry, vol. 40, no. 7, Jul. 2025, doi: https://doi.org/10.1002/gps.70129.
+    [2] “Brain Changes Linked With Alzheimer’s Years Before Symptoms Appear,” Hopkinsmedicine.org, 2019. https://www.hopkinsmedicine.org/news/newsroom/news-releases/2019/05/brain-changes-linked-with-alzheimers-years-before-symptoms-appear
+    [3] “Alzheimer’s Disease (AD) & Neuroinflammation | Decoding AD,” Decodingalzheimersdisease.com, 2024. https://www.decodingalzheimersdisease.com/role-of-neuroinflammation.html#the-science
+    [4] M. Quarantelli, “MRI/MRS in neuroinflammation: methodology and applications,” Clinical and Translational Imaging, vol. 3, no. 6, pp. 475–489, Sep. 2015, doi: https://doi.org/10.1007/s40336-015-0142-y.
+    [5]“Open Access Series of Imaging Studies (OASIS),” Open Access Series of Imaging Studies (OASIS). https://sites.wustl.edu/oasisbrains/
+    [6] M. Li et al., “Handedness- and Hemisphere-Related Differences in Small-World Brain Networks: A Diffusion Tensor Imaging Tractography Study,” Brain Connectivity, vol. 4, no. 2, pp. 145–156, Mar. 2014, doi: https://doi.org/10.1089/brain.2013.0211.
+    """)
 
 # ------------------------------------------------------------------------
 # SIDEBAR NAVIGATION
