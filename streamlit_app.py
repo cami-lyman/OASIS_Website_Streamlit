@@ -173,7 +173,18 @@ def render_oasis():
 ###############################################################
 def render_code():
     st.header('Brain processing and Segmentation Code', divider='blue')
-    st.write('Brain Volumetric Pipeline - Code demonstrating various methods of calculating and normalizing brain volume from MRI scans.')
+    st.write('''
+    Brain Volumetric Pipeline - Code demonstrating various methods of calculating and normalizing brain volume from MRI scans.
+    
+    There are various methods of calculating and normalizing the volume of a brain from an MRI. 
+    The following is the code that was used to do this in two different ways for our project:
+    - Brain Extraction using ANTsPyNet.utilities.brain_extraction
+    - Brain Extraction using ANTsPyNet.utilities.deep_atropos
+    
+    Both of these methods use deep learning models to predict and segment different types of tissue in an MRI scan.
+    
+    Included is also some exploratory code for visualizing the images and data.
+    ''')
     
     st.subheader('Imports and Setup')
     st.code('''
@@ -189,6 +200,7 @@ import seaborn as sns
 ''', language='python')
     
     st.subheader('Load Data Files')
+    st.write('Establish the paths used and set up initial dataframe')
     st.code('''
 # File paths
 path = "path/to/OASIS_selected/"
@@ -200,6 +212,7 @@ oasis_crossref = oasis_crossref.dropna(subset=['CDR'])
 ''', language='python')
     
     st.subheader('Example Image Visualization')
+    st.write('While not needed for any analysis, knowing what we\'re actively working with is useful.')
     st.code('''
 # Load and display an MRI scan
 path_ex = "path/to/example_brain.hdr"
@@ -212,6 +225,30 @@ plt.axis('off')
 plt.title('Example slice image of Brain')
 plt.show()
 ''', language='python')
+    
+    st.subheader('Volumetrics')
+    st.write('''
+    Now that we have a bit of an idea of what data we're utilizing, time to actually calculate the desired metrics.
+    We start with creating a list of the IDs of the brain scans so we can look just at scans that:
+    1. Exist
+    2. Have a CDR to correlate to
+    ''')
+    st.code('''
+# List of IDs
+Ids = oasis_crossref['ID']
+''', language='python')
+    
+    st.write('''
+    With that, we can loop through all the brains, calculate each volume, and list them out.
+    To do said calculations, we'll start by defining functions for each method.
+    
+    **Note:** It is with a heavy heart that these methods are flawed. By calculating the volumes of the ATLAS Registered images, 
+    the volumes will be warped. The Atlas Scaling Factor (ASF) lets us convert back to natural space, but calculating the volume 
+    in ATLAS space leads to stretching/warping of values. Therefore if this project were done professionally, we would experience 
+    errors here. However, this process does a good job of estimating the normalized Whole Brain Volume and isn't terribly erroneous.
+    
+    *(If we wanted to correct this in the future and do it correctly, we would need to start in natural space and register to ATLAS space manually.)*
+    ''')
     
     st.subheader('Method #1: Brain Extraction')
     st.write('Perform brain extraction using U-net and ANTs-based training data.')
@@ -267,6 +304,7 @@ def atropos_segmentation(img, pre):
 ''', language='python')
     
     st.subheader('Calculate Volumes for All Scans')
+    st.write('**Do not run this following chunk unless you want your computer to die. It takes 90 minutes on a 4070.**')
     st.code('''
 # Initialize arrays
 pixel_counts_brain_extraction = np.zeros(len(Ids))
@@ -290,18 +328,28 @@ for i in range(len(Ids)):
         atropos_segmentation(raw_img_ants, pre=False)
 ''', language='python')
     
-    st.subheader('Normalize Brain Volumes')
+    st.subheader('Wrangling')
     st.write('''
-    Normalization formula from Buckner et al. 2004:
+    With the volumes calculated, now we need to normalize them!
     
-    $$nWBV = \\frac{Vol_{atl}}{eTIV \\times ASF}$$
+    From *Buckner et al. 2004*, we know the following:
+    - Estimated total intracranial volume (eTIV) is a fully automated estimate of TIVₙₐₜ (Total Intracranial Volume in natural space)
+    - Total Intracranial Volume in ATLAS space (TIVₐₜₗ) divided by the ATLAS scaling factor (ASF) yields TIVₙₐₜ
+    - The same relations apply to Volume (atl and nat)
+    - Normalized Whole Brain Volume (nWBV) is the automated tissue segmentation based estimate of brain volume (gray-plus white-matter). 
+      Normalized to percentage based on the atlas target mask.
     
-    Where:
-    - nWBV = Normalized Whole Brain Volume
-    - Vol_atl = Volume in ATLAS space
-    - eTIV = Estimated Total Intracranial Volume
-    - ASF = ATLAS Scaling Factor
+    Therefore, we obtain the following equations and relations:
     ''')
+    st.latex(r'eTIV \approx TIV_{nat} = \frac{TIV_{atl}}{ASF}')
+    st.latex(r'Vol_{nat} = \frac{Vol_{atl}}{ASF}')
+    st.latex(r'nWBV = \frac{Vol_{nat}}{eTIV}')
+    st.write('''
+    Which gives us the final equation we should apply to the calculated volumes to obtain volumes normalized to the ATLAS template brain scan used for segmentation and analysis:
+    ''')
+    st.latex(r'nWBV = \frac{Vol_{atl}}{eTIV \times ASF}')
+    
+    st.subheader('Normalize Brain Volumes')
     st.code('''
 # Add volumes to dataframe
 oasis_crossref['Vol BE'] = volumes_brain_extraction
@@ -315,7 +363,34 @@ oasis_crossref['nWBV_deep_atropos'] = \\
     oasis_crossref['Vol DA'] / (oasis_crossref['ASF'] * (oasis_crossref['eTIV'] * 1000))
 ''', language='python')
     
+    st.write('''
+    **Note:** The following dataframe will have misaligned variable names as defined above. This is because the displayed df below 
+    was not created by this chunk of code. It was copied over from an older example, and re-running the code to recreate the values 
+    would be more than tedious.
+    ''')
+    st.code('''
+# Load in modified csv with stored values
+# This is done to create this example code without having to re-run
+csv_data = "path/to/final_data_oasis.csv"
+Data = pd.read_csv(csv_data)
+''', language='python')
+    
+    st.subheader('Plotting')
+    st.write('''
+    With the above data, we have a lot of values to work with to answer our goal question(s):
+    - nWBV_brain_extraction and nWBV_deep_atropos give us two different methods to compare for calculating a normalized whole brain volume
+    - nWBV is the normalized brain volume from the original data set just for comparison and correctness
+    - Clinical Dementia Rating (CDR) when compared with the nWBVs allows us to find out if CDR and brain volume are related in any ways
+    - We can also see how CDR, Brain Volume, Age, Sex and other demographic data are related
+    
+    The below code includes some visualization plots for example.
+    ''')
+    
     st.subheader('Visualization: CDR vs nWBV')
+    st.write('''
+    This first one below is box and whisker for CDR vs nWBV. In theory this will show our biggest question/curiosity with this 
+    project with regards to whether dementia and brain volume correlate.
+    ''')
     st.code('''
 # Box plot for CDR vs nWBV
 sns.boxplot(x='CDR', y='nWBV', data=Data)
@@ -325,6 +400,10 @@ plt.show()
 ''', language='python')
     
     st.subheader('Visualization: nWBV vs Age by Gender')
+    st.write('''
+    Again, plotting a scatter plot this time, to compare the nWBVs with how they correlate (or not) with age.
+    For this plot, the different genders were plotted separately to also see how that differs between M/F.
+    ''')
     st.code('''
 # Create sub-dataframes for genders
 men = Data[Data['M/F'] == 'M']
@@ -340,6 +419,13 @@ plt.show()
 ''', language='python')
     
     st.subheader('Compare Methods')
+    st.write('''
+    While for the above plots we've used the nWBV values that were given with the OASIS 1 dataset, we wanted to find these on our own for this project, and have done so.
+    
+    The question remains of how effectively the brain_extraction method and the deep_atropos methods approximate nWBV.
+    
+    We can compare them visually by looking again at nWBV vs CDR, but with the 3 different methods.
+    ''')
     st.code('''
 # Compare three different methods side by side
 fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, figsize=(10, 4))
