@@ -402,9 +402,29 @@ def render_data_and_graphs():
         font-size: 22px;
         font-weight: normal;
     }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0px;
+    }
+    .stTabs [data-baseweb="tab-list"] button {
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        border-radius: 8px 8px 0 0;
+        padding: 12px 20px;
+        margin-right: -1px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background-color: rgba(0, 0, 0, 0.03);
+    }
+    .stTabs [data-baseweb="tab-list"] button:hover {
+        background-color: rgba(0, 0, 0, 0.08);
+        border-color: rgba(0, 0, 0, 0.25);
+        z-index: 1;
+    }
     .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
-        background-color: rgba(0, 0, 0, 0.15);
-        border-radius: 4px;
+        background-color: white;
+        border-bottom: 3px solid #1f77b4;
+        font-weight: 500;
+        z-index: 2;
+        border-bottom-color: white;
     }
     </style>
     """, unsafe_allow_html=True)
