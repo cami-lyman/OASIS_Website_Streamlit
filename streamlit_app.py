@@ -399,7 +399,8 @@ def render_data_and_graphs():
     st.markdown("""
     <style>
     .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
-        font-size: 18px;
+        font-size: 22px;
+        font-weight: normal;
     }
     .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
         background-color: rgba(0, 0, 0, 0.15);
@@ -421,7 +422,7 @@ def render_data_and_graphs():
     # TAB 1: HISTOGRAMS
     ##########################################################
     with tab1:
-        st.subheader("Distribution of Brain Volume")
+        st.markdown("<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Distribution of Brain Volume</p>", unsafe_allow_html=True)
         fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
         if len(available)==1: axes=[axes]
         for i,m in enumerate(available):
@@ -444,7 +445,7 @@ def render_data_and_graphs():
     # TAB 2: MEAN ± SEM PLOTS
     ##########################################################
     with tab2:
-        st.subheader("Average Brain Volume by CDR - Bar Chart")
+        st.markdown("<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Average Brain Volume by CDR - Bar Chart</p>", unsafe_allow_html=True)
         if "CDR" in df.columns:
             fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
             if len(available)==1: axes=[axes]
@@ -478,7 +479,7 @@ def render_data_and_graphs():
     ##########################################################
     with tab3:
         if "CDR" in df.columns:
-            st.subheader("Brain Volume by CDR — Boxplots")
+            st.markdown("<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Brain Volume by CDR — Boxplots</p>", unsafe_allow_html=True)
             fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
             if len(available)==1: axes=[axes]
             # Calculate common y-axis limits across all methods
@@ -512,7 +513,7 @@ def render_data_and_graphs():
     # TAB 4: SCATTERPLOTS + REGRESSION LINES
     ##########################################################
     with tab4:
-        st.subheader("Brain Volume vs Age — Scatterplots")
+        st.markdown("<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Brain Volume vs Age — Scatterplots</p>", unsafe_allow_html=True)
 
         age_col = next((c for c in ["AGE","Age","age"] if c in df.columns), None)
         sex_col = next((c for c in ["M/F","SEX","Sex","sex","Gender","gender"] if c in df.columns), None)
@@ -606,7 +607,7 @@ def render_data_and_graphs():
         mmse_cols = ["MMSE","mmse"]
         mmse = next((c for c in mmse_cols if c in df.columns), None)
         if mmse:
-            st.subheader("Brain Volume by MMSE Scores — Scatterplots")
+            st.markdown("<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Brain Volume by MMSE Scores — Scatterplots</p>", unsafe_allow_html=True)
             fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
             if len(available)==1: axes=[axes]
             
@@ -709,50 +710,72 @@ def render_references():
 ###############################################################
 st.sidebar.header("Navigation")
 
-PAGES = ["Overview","OASIS","Code","Data & Graphs","Conclusions","References"]
+PAGES = [
+    "Overview",
+    "OASIS",
+    "Code",
+    "Data & Graphs",
+    "Conclusions",
+    "References"
+]
 
 if "page" not in st.session_state:
     st.session_state.page = "Overview"
 
-page = st.sidebar.radio(label="", options=PAGES,
-                        index=PAGES.index(st.session_state.page))
+# Radio with hidden label
+page = st.sidebar.radio(
+    label="",        # No visible label
+    options=PAGES,
+    index=PAGES.index(st.session_state.page),
+)
 
-st.session_state.page = page
+if page != st.session_state.page:
+    st.session_state.page = page
 
-# pretty tile styling
-st.sidebar.markdown("""
-<style>
-section[data-testid="stSidebar"] svg { display: none !important; }
-section[data-testid="stSidebar"] input[type="radio"] { display:none !important; }
-section[data-testid="stSidebar"] .stRadio label {
-    display:block !important;
-    padding:10px 12px;
-    margin:4px 0;
-    border-radius:8px;
-    transition:0.15s;
-}
-section[data-testid="stSidebar"] .stRadio label:hover {
-    background:rgba(0,0,0,0.06);
-}
-section[data-testid="stSidebar"] .stRadio label:has(input[type=radio]:checked) {
-    background:rgba(0,0,0,0.10);
-    font-weight:700;
-}
-</style>
-""", unsafe_allow_html=True)
+# Sidebar CSS to make pages look like tiles and remove native radio visuals
+st.sidebar.markdown(
+    """
+    <style>
+    section[data-testid="stSidebar"] svg { display: none !important; }
+    section[data-testid="stSidebar"] input[type="radio"] { display: none !important; }
+    section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child { display: none !important; }
+    section[data-testid="stSidebar"] .stRadio {
+        margin-top: -1rem !important;
+    }
+    section[data-testid="stSidebar"] .stRadio label {
+        display: block !important;
+        padding: 10px 12px !important;
+        margin: 4px 0 !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        transition: all 0.12s ease !important;
+        border: 2px solid transparent !important;
+    }
+    section[data-testid="stSidebar"] .stRadio label:hover {
+        background: rgba(0,0,0,0.06) !important;
+    }
+    section[data-testid="stSidebar"] .stRadio label:has(input[type="radio"]:checked) {
+        background: rgba(0,0,0,0.08) !important;
+        font-weight: 600 !important;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.15) !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 ###############################################################
 # PAGE ROUTER
 ###############################################################
-if page=="Overview":
+if page == "Overview":
     render_overview()
-elif page=="OASIS":
+elif page == "OASIS":
     render_oasis()
-elif page=="Code":
+elif page == "Code":
     render_code()
-elif page=="Data & Graphs":
+elif page == "Data & Graphs":
     render_data_and_graphs()
-elif page=="Conclusions":
+elif page == "Conclusions":
     render_conclusions()
-elif page=="References":
+elif page == "References":
     render_references()
