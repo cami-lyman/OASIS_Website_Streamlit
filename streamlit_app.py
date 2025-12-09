@@ -172,7 +172,7 @@ def render_oasis():
 # PAGE: CODE (from Portfolio_sample_code.ipynb)
 ###############################################################
 def render_code():
-    st.header('Code for Show', divider='blue')
+    st.header('Brain processing and Segmentation Code', divider='blue')
     st.write('Brain Volumetric Pipeline - Code demonstrating various methods of calculating and normalizing brain volume from MRI scans.')
     
     st.subheader('Imports and Setup')
