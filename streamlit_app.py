@@ -88,24 +88,14 @@ def render_overview():
                     data = np.squeeze(img.get_fdata())
                     
                     # Buttons for choosing view
-                    c1, c2, c3 = st.columns(3)
-                    if c1.button("Axial", key="overview_axial"):
-                        st.session_state.mri_view = "Axial"
-                        st.session_state.mri_play = False
-                    if c2.button("Sagittal", key="overview_sagittal"):
-                        st.session_state.mri_view = "Sagittal"
-                        st.session_state.mri_play = False
-                    if c3.button("Coronal", key="overview_coronal"):
-                        st.session_state.mri_view = "Coronal"
-                        st.session_state.mri_play = False
+                    views = {"Axial": 2, "Sagittal": 0, "Coronal": 1}
+                    cols = st.columns(3)
+                    for col, view in zip(cols, views.keys()):
+                        if col.button(view, key=f"overview_{view.lower()}"):
+                            st.session_state.mri_view = view
+                            st.session_state.mri_play = False
                     
-                    # Determine slice axis
-                    if st.session_state.mri_view == "Axial":
-                        slice_axis = 2
-                    elif st.session_state.mri_view == "Sagittal":
-                        slice_axis = 0
-                    else:
-                        slice_axis = 1
+                    slice_axis = views[st.session_state.mri_view]
                     
                     num_slices = data.shape[slice_axis]
                     
@@ -125,12 +115,9 @@ def render_overview():
                               on_change=update_mri_slice)
                     
                     # Extract slice
-                    if slice_axis == 0:
-                        slice_data = data[st.session_state.mri_slice_idx,:,:]
-                    elif slice_axis == 1:
-                        slice_data = data[:,st.session_state.mri_slice_idx,:]
-                    else:
-                        slice_data = data[:,:,st.session_state.mri_slice_idx]
+                    slices = [slice(None)] * 3
+                    slices[slice_axis] = st.session_state.mri_slice_idx
+                    slice_data = data[tuple(slices)]
                     
                     fig, ax = plt.subplots(figsize=(3,3))
                     ax.imshow(slice_data.T, cmap="twilight_shifted", origin="lower")
@@ -454,6 +441,51 @@ plt.show()
 
 
 ###############################################################
+# HELPER FUNCTIONS
+###############################################################
+def apply_tab_styles():
+    """Apply custom CSS for tab styling"""
+    st.markdown("""
+    <style>
+    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {font-size: 22px; font-weight: normal;}
+    .stTabs [data-baseweb="tab-list"] {gap: 0px;}
+    .stTabs [data-baseweb="tab-list"] button {
+        border: 1px solid rgba(0, 0, 0, 0.15); border-radius: 8px 8px 0 0; padding: 12px 20px;
+        margin-right: -1px; transition: all 0.2s ease; background-color: rgba(0, 0, 0, 0.03);
+    }
+    .stTabs [data-baseweb="tab-list"] button:hover {background-color: rgba(0, 0, 0, 0.08); border-color: rgba(0, 0, 0, 0.25); z-index: 1;}
+    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
+        background-color: white; border-bottom: 3px solid #1f77b4; font-weight: 500; z-index: 2; border-bottom-color: white;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+def setup_axes(axes, num_plots):
+    """Convert single axis to list for consistent handling"""
+    return [axes] if num_plots == 1 else axes
+
+def plot_method_comparison(df, methods, method_labels, method_colors, plot_func, **kwargs):
+    """Generic function to create comparison plots across methods"""
+    fig, axes = plt.subplots(1, len(methods), figsize=(8*len(methods), 5))
+    axes = setup_axes(axes, len(methods))
+    for i, method in enumerate(methods):
+        plot_func(df, method, axes[i], method_labels[method], method_colors[method], **kwargs)
+    return fig
+
+def calc_regression_stats(x, y):
+    """Calculate regression line statistics"""
+    if len(x) < 2:
+        return None
+    z = np.polyfit(x, y, 1)
+    slope, intercept = z[0], z[1]
+    p = np.poly1d(z)
+    y_pred = p(x)
+    ss_res = np.sum((y - y_pred) ** 2)
+    ss_tot = np.sum((y - y.mean()) ** 2)
+    r2 = 1 - ss_res / ss_tot if ss_tot != 0 else 0
+    return {"slope": slope, "intercept": intercept, "r2": r2, "poly": p}
+
+###############################################################
 # PAGE: DATA & GRAPHS (UNIFIED)
 ###############################################################
 def render_data_and_graphs():
@@ -481,39 +513,8 @@ def render_data_and_graphs():
 
     available = [m for m in volume_methods if m in df.columns]
 
-    # Custom CSS for tab styling
-    st.markdown("""
-    <style>
-    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
-        font-size: 22px;
-        font-weight: normal;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 0px;
-    }
-    .stTabs [data-baseweb="tab-list"] button {
-        border: 1px solid rgba(0, 0, 0, 0.15);
-        border-radius: 8px 8px 0 0;
-        padding: 12px 20px;
-        margin-right: -1px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        background-color: rgba(0, 0, 0, 0.03);
-    }
-    .stTabs [data-baseweb="tab-list"] button:hover {
-        background-color: rgba(0, 0, 0, 0.08);
-        border-color: rgba(0, 0, 0, 0.25);
-        z-index: 1;
-    }
-    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
-        background-color: white;
-        border-bottom: 3px solid #1f77b4;
-        font-weight: 500;
-        z-index: 2;
-        border-bottom-color: white;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    # Apply custom tab styling
+    apply_tab_styles()
 
     # Create tabs for different graph types
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -529,18 +530,18 @@ def render_data_and_graphs():
     ##########################################################
     with tab1:
         st.markdown("<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Distribution of Brain Volume</p>", unsafe_allow_html=True)
-        fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
-        if len(available)==1: axes=[axes]
-        for i,m in enumerate(available):
-            sns.histplot(df[m].dropna(), bins=20, ax=axes[i], color=method_colors[m])
-            axes[i].set_title(method_labels[m], fontsize=20)
-            axes[i].set_xlabel('Brain Volume (mm³)', fontsize=16)
-            axes[i].set_ylabel('# Participants', fontsize=16)
-            axes[i].tick_params(labelsize=14)
-            axes[i].set_ylim(0, None)  # Start at 0, let max vary
-            # Format x-axis to 2 decimal places for nWBV (Original)
-            if m == "nWBV":
-                axes[i].xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.2f}'))
+        
+        def plot_hist(df, method, ax, label, color):
+            sns.histplot(df[method].dropna(), bins=20, ax=ax, color=color)
+            ax.set_title(label, fontsize=20)
+            ax.set_xlabel('Brain Volume (mm³)', fontsize=16)
+            ax.set_ylabel('# Participants', fontsize=16)
+            ax.tick_params(labelsize=14)
+            ax.set_ylim(0, None)
+            if method == "nWBV":
+                ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x:.2f}'))
+        
+        fig = plot_method_comparison(df, available, method_labels, method_colors, plot_hist)
         st.pyplot(fig)
         
         st.markdown("---")
@@ -553,19 +554,16 @@ def render_data_and_graphs():
     with tab2:
         st.markdown("<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Average Brain Volume by CDR - Bar Chart</p>", unsafe_allow_html=True)
         if "CDR" in df.columns:
-            fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
-            if len(available)==1: axes=[axes]
+            def plot_bar(df, method, ax, label, color):
+                grp = df.groupby("CDR")[method].agg(["mean","sem"]).reset_index()
+                ax.bar(grp["CDR"].astype(str), grp["mean"], yerr=grp["sem"], capsize=6, color=color)
+                ax.set_title(label, fontsize=20)
+                ax.set_xlabel('CDR', fontsize=16)
+                ax.set_ylabel('Brain Volume (mm³)', fontsize=16)
+                ax.tick_params(labelsize=14)
+                ax.set_ylim(0.6, 0.9)
             
-            for i,m in enumerate(available):
-                grp = df.groupby("CDR")[m].agg(["mean","sem"]).reset_index()
-                axes[i].bar(grp["CDR"].astype(str), grp["mean"],
-                            yerr=grp["sem"], capsize=6,
-                            color=method_colors[m])
-                axes[i].set_title(method_labels[m], fontsize=20)
-                axes[i].set_xlabel('CDR', fontsize=16)
-                axes[i].set_ylabel('Brain Volume (mm³)', fontsize=16)
-                axes[i].tick_params(labelsize=14)
-                axes[i].set_ylim(0.6, 0.9)
+            fig = plot_method_comparison(df, available, method_labels, method_colors, plot_bar)
             st.pyplot(fig)
             
             # Display mean and SEM values in tables
@@ -586,19 +584,18 @@ def render_data_and_graphs():
     with tab3:
         if "CDR" in df.columns:
             st.markdown("<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Brain Volume by CDR — Boxplots</p>", unsafe_allow_html=True)
-            fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
-            if len(available)==1: axes=[axes]
-            # Calculate common y-axis limits across all methods
             all_data = pd.concat([df[m].dropna() for m in available])
             ymin, ymax = all_data.min() * 0.95, all_data.max() * 1.05
             
-            for i,m in enumerate(available):
-                sns.boxplot(x="CDR", y=m, data=df, ax=axes[i], color=method_colors[m])
-                axes[i].set_title(method_labels[m], fontsize=20)
-                axes[i].set_xlabel('CDR', fontsize=16)
-                axes[i].set_ylabel('Brain Volume (mm³)', fontsize=16)
-                axes[i].tick_params(labelsize=14)
-                axes[i].set_ylim(ymin, ymax)
+            def plot_box(df, method, ax, label, color, ylims):
+                sns.boxplot(x="CDR", y=method, data=df, ax=ax, color=color)
+                ax.set_title(label, fontsize=20)
+                ax.set_xlabel('CDR', fontsize=16)
+                ax.set_ylabel('Brain Volume (mm³)', fontsize=16)
+                ax.tick_params(labelsize=14)
+                ax.set_ylim(*ylims)
+            
+            fig = plot_method_comparison(df, available, method_labels, method_colors, plot_box, ylims=(ymin, ymax))
             st.pyplot(fig)
             
             # Display boxplot statistics for each CDR by method
@@ -674,26 +671,14 @@ def render_data_and_graphs():
                 regression_data = []
                 for sex, label in [("f", "Female"), ("m", "Male")]:
                     sd = d[d[sex_col].str.lower().str.contains(sex)]
-                    
-                    if len(sd) > 1:
-                        # Calculate regression
-                        z = np.polyfit(sd[age_col], sd[m], 1)
-                        slope, intercept = z[0], z[1]
-                        
-                        # Calculate R²
-                        p = np.poly1d(z)
-                        y_pred = p(sd[age_col])
-                        y_true = sd[m]
-                        ss_res = np.sum((y_true - y_pred) ** 2)
-                        ss_tot = np.sum((y_true - y_true.mean()) ** 2)
-                        r2 = 1 - ss_res / ss_tot if ss_tot != 0 else 0
-                        
+                    stats = calc_regression_stats(sd[age_col], sd[m])
+                    if stats:
                         regression_data.append({
                             "Sex": label,
-                            "Slope": f"{slope:.4f}",
-                            "Intercept": f"{intercept:.4f}",
-                            "Equation": f"y = {slope:.4f}x + {intercept:.4f}",
-                            "R²": f"{r2:.3f}",
+                            "Slope": f"{stats['slope']:.4f}",
+                            "Intercept": f"{stats['intercept']:.4f}",
+                            "Equation": f"y = {stats['slope']:.4f}x + {stats['intercept']:.4f}",
+                            "R²": f"{stats['r2']:.3f}",
                             "Sample Size": len(sd)
                         })
                 
@@ -710,32 +695,24 @@ def render_data_and_graphs():
     # TAB 5: MMSE SCATTERPLOTS
     ##########################################################
     with tab5:
-        mmse_cols = ["MMSE","mmse"]
-        mmse = next((c for c in mmse_cols if c in df.columns), None)
+        mmse = next((c for c in ["MMSE","mmse"] if c in df.columns), None)
         if mmse:
             st.markdown("<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Brain Volume by MMSE Scores — Scatterplots</p>", unsafe_allow_html=True)
-            fig, axes = plt.subplots(1,len(available), figsize=(8*len(available),5))
-            if len(available)==1: axes=[axes]
             
-            for i,m in enumerate(available):
-                d = df[[mmse, m]].dropna()
-                
-                # Scatter plot
-                axes[i].scatter(d[mmse], d[m], color=method_colors[m], edgecolor="k", alpha=0.6)
-                
-                # Regression line
-                if len(d) > 1:
-                    z = np.polyfit(d[mmse], d[m], 1)
-                    p = np.poly1d(z)
+            def plot_mmse_scatter(df, method, ax, label, color):
+                d = df[[mmse, method]].dropna()
+                ax.scatter(d[mmse], d[method], color=color, edgecolor="k", alpha=0.6)
+                stats = calc_regression_stats(d[mmse], d[method])
+                if stats:
                     xx = np.linspace(d[mmse].min(), d[mmse].max(), 100)
-                    axes[i].plot(xx, p(xx), color="black", linestyle="--", linewidth=2)
-                
-                axes[i].set_title(method_labels[m], fontsize=20)
-                axes[i].set_xlabel("MMSE Score", fontsize=16)
-                axes[i].set_ylabel("Brain Volume", fontsize=16)
-                axes[i].tick_params(labelsize=14)
-                axes[i].grid(True, alpha=0.3)
+                    ax.plot(xx, stats['poly'](xx), color="black", linestyle="--", linewidth=2)
+                ax.set_title(label, fontsize=20)
+                ax.set_xlabel("MMSE Score", fontsize=16)
+                ax.set_ylabel("Brain Volume", fontsize=16)
+                ax.tick_params(labelsize=14)
+                ax.grid(True, alpha=0.3)
             
+            fig = plot_method_comparison(df, available, method_labels, method_colors, plot_mmse_scatter)
             st.pyplot(fig)
             
             # Display quartile statistics by MMSE score
@@ -752,28 +729,15 @@ def render_data_and_graphs():
             st.subheader("Regression Line Statistics")
             for m in available:
                 d = df[[mmse, m]].dropna()
-                
-                if len(d) > 1:
-                    # Calculate regression
-                    z = np.polyfit(d[mmse], d[m], 1)
-                    slope, intercept = z[0], z[1]
-                    
-                    # Calculate R²
-                    p = np.poly1d(z)
-                    y_pred = p(d[mmse])
-                    y_true = d[m]
-                    ss_res = np.sum((y_true - y_pred) ** 2)
-                    ss_tot = np.sum((y_true - y_true.mean()) ** 2)
-                    r2 = 1 - ss_res / ss_tot if ss_tot != 0 else 0
-                    
+                stats = calc_regression_stats(d[mmse], d[m])
+                if stats:
                     reg_data = pd.DataFrame([{
-                        "Slope": f"{slope:.4f}",
-                        "Intercept": f"{intercept:.4f}",
-                        "Equation": f"y = {slope:.4f}x + {intercept:.4f}",
-                        "R²": f"{r2:.3f}",
+                        "Slope": f"{stats['slope']:.4f}",
+                        "Intercept": f"{stats['intercept']:.4f}",
+                        "Equation": f"y = {stats['slope']:.4f}x + {stats['intercept']:.4f}",
+                        "R²": f"{stats['r2']:.3f}",
                         "Sample Size": len(d)
                     }])
-                    
                     st.write(f"**{method_labels[m]}:**")
                     st.dataframe(reg_data, hide_index=True)
                     st.write("")
