@@ -13,6 +13,7 @@ from typing import List
 from PIL import Image
 import matplotlib.pyplot as plt
 import seaborn as sns
+import scipy.optimize
 
 # Optional MRI loading
 try:
@@ -485,6 +486,94 @@ def calc_regression_stats(x, y):
     r2 = 1 - ss_res / ss_tot if ss_tot != 0 else 0
     return {"slope": slope, "intercept": intercept, "r2": r2, "poly": p}
 
+def chi_squared_brain(params, ages, volumes):
+    """Chi-squared style objective for linear model: volume = m*age + b"""
+    m, b = params[0], params[1]
+    fit = m * ages + b
+    fit_safe = np.where(fit == 0, 1e-8, np.abs(fit))
+    vals = (volumes - fit)**2 / fit_safe
+    return np.sum(vals)
+
+def bootstrap_brain_regression(ages, volumes, B=1000, alpha=0.05):
+    """Residual-bootstrap for linear Age -> nWBV model using chi-squared fit"""
+    ages = np.asarray(ages)
+    volumes = np.asarray(volumes)
+    
+    # Fit once to get best m, b and residuals
+    m_start = -0.001
+    b_start = volumes.mean()
+    
+    ans = scipy.optimize.minimize(
+        chi_squared_brain,
+        [m_start, b_start],
+        args=(ages, volumes)
+    )
+    
+    m_hat, b_hat = ans.x
+    fit_hat = m_hat * ages + b_hat
+    residuals = volumes - fit_hat
+    
+    boot_m = np.zeros(B)
+    boot_b = np.zeros(B)
+    n = len(ages)
+    
+    # Bootstrap loop: resample residuals, refit model
+    for i in range(B):
+        resampled = np.random.choice(residuals, size=n, replace=True)
+        volumes_star = fit_hat + resampled
+        
+        ans_star = scipy.optimize.minimize(
+            chi_squared_brain,
+            [m_hat, b_hat],
+            args=(ages, volumes_star)
+        )
+        boot_m[i], boot_b[i] = ans_star.x
+    
+    # Compute percentile CIs
+    low = 100 * (alpha / 2)
+    high = 100 * (1 - alpha / 2)
+    
+    m_ci = np.percentile(boot_m, [low, high])
+    b_ci = np.percentile(boot_b, [low, high])
+    
+    return {
+        "m_hat": m_hat,
+        "b_hat": b_hat,
+        "m_ci": m_ci,
+        "b_ci": b_ci,
+        "boot_m": boot_m,
+        "boot_b": boot_b
+    }
+
+def plot_bootstrap_fan(ages, volumes, results, ax, title, n_lines=50):
+    """Plot scatter with bootstrap fan of lines on given axis"""
+    ages = np.asarray(ages)
+    volumes = np.asarray(volumes)
+    
+    x_grid = np.linspace(ages.min(), ages.max(), 100)
+    y_best = results["m_hat"] * x_grid + results["b_hat"]
+    
+    ax.scatter(ages, volumes, alpha=0.5, s=20)
+    
+    # Plot subset of bootstrap lines
+    n_boot = len(results["boot_m"])
+    n_lines = min(n_lines, n_boot)
+    idx = np.random.choice(n_boot, size=n_lines, replace=False)
+    
+    for i in idx:
+        m_i = results["boot_m"][i]
+        b_i = results["boot_b"][i]
+        y_line = m_i * x_grid + b_i
+        ax.plot(x_grid, y_line, alpha=0.08, color='gray', linewidth=0.5)
+    
+    # Plot best fit line
+    ax.plot(x_grid, y_best, color="black", linewidth=2, label="Best fit")
+    ax.set_xlabel("Age", fontsize=14)
+    ax.set_ylabel("Brain Volume", fontsize=14)
+    ax.set_title(title, fontsize=16)
+    ax.legend(fontsize=10)
+    ax.tick_params(labelsize=12)
+
 ###############################################################
 # PAGE: DATA & GRAPHS (UNIFIED)
 ###############################################################
@@ -685,6 +774,60 @@ def render_data_and_graphs():
                 if regression_data:
                     reg_df = pd.DataFrame(regression_data)
                     st.dataframe(reg_df, hide_index=True)
+                st.write("")
+            
+            # Bootstrap Analysis Section
+            st.markdown("---")
+            st.subheader("Bootstrap Regression Analysis (Chi-Squared Fit)")
+            st.write("""Using residual bootstrap with 1000 iterations to estimate uncertainty in regression parameters.""")
+            
+            # Run bootstrap for all methods and create side-by-side plots
+            bootstrap_results = {}
+            for m in available:
+                d = df[[age_col, m]].dropna()
+                with st.spinner(f"Running bootstrap for {method_labels[m]}..."):
+                    bootstrap_results[m] = {
+                        'data': d,
+                        'results': bootstrap_brain_regression(d[age_col].values, d[m].values, B=1000)
+                    }
+            
+            # Create side-by-side bootstrap fan plots
+            fig_fans, axes_fans = plt.subplots(1, len(available), figsize=(8 * len(available), 5))
+            if len(available) == 1:
+                axes_fans = [axes_fans]
+            
+            for i, m in enumerate(available):
+                d = bootstrap_results[m]['data']
+                results = bootstrap_results[m]['results']
+                plot_bootstrap_fan(
+                    d[age_col].values, 
+                    d[m].values, 
+                    results, 
+                    axes_fans[i],
+                    method_labels[m]
+                )
+            
+            plt.tight_layout()
+            st.pyplot(fig_fans)
+            plt.close(fig_fans)
+            
+            # Display bootstrap statistics tables
+            st.subheader("Bootstrap Parameter Estimates")
+            for m in available:
+                results = bootstrap_results[m]['results']
+                st.write(f"**{method_labels[m]}:**")
+                boot_stats = pd.DataFrame([{
+                    "Parameter": "Slope (m)",
+                    "Estimate": f"{results['m_hat']:.6f}",
+                    "95% CI Lower": f"{results['m_ci'][0]:.6f}",
+                    "95% CI Upper": f"{results['m_ci'][1]:.6f}"
+                }, {
+                    "Parameter": "Intercept (b)",
+                    "Estimate": f"{results['b_hat']:.6f}",
+                    "95% CI Lower": f"{results['b_ci'][0]:.6f}",
+                    "95% CI Upper": f"{results['b_ci'][1]:.6f}"
+                }])
+                st.dataframe(boot_stats, hide_index=True)
                 st.write("")
 
         st.markdown("---")
