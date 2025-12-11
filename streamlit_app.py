@@ -71,8 +71,14 @@ def render_overview():
     with col1:
         st.subheader("About")
         st.write("""
-        Dementia is a neurodegenerative disease which impacts millions worldwide...
-        (***your full text kept exactly as written***)
+        Dementia is a neurodegenerative disease that impacts millions of people around the world. Currently, the average time to diagnosis is 3.5 years [1]. This delay reduces the treatment options available, as many treatments that slow disease progression are only effective in the early stages. Brain MRIs may offer a way to improve early diagnosis and track disease progression, as some brain changes can be seen years before symptoms develop [2]. Neuroinflammation is a likely part of the pathogenesis of Alzheimer’s, and it can be seen on MRIs [3][4]. Additionally, loss of brain volume over time is a known feature of dementia.
+
+Our goal was to examine the relationship between brain volume and dementia status using data from the OASIS (Open Access Series of Imaging Studies) project [5]. The OASIS project dataset we used contained three-dimensional MRI scan files as well as information about each patient’s dementia status as measured by clinical dementia rating (CDR) and demographic information such as age and gender. The MRI viewer on the right displays cross-sectional brain scans that allow you to explore the anatomy captured in this dataset. 
+
+To calculate the brain volumes, we used two separate methods in a similar process. We started by creating a list of all the MRI brain scans for which we have clinical data for. Looping through that list, we utilized two modules imported from the ANTsPyNet framework: ‘brain_extraction’ and ‘deep_atropos’. These utilities were used to generate a probability map of brain-like voxels. 
+
+These maps were used to segment the images and sum up all the desired voxels representing brain regions. Then, these voxels were multiplied by a known voxel spacing to obtain the brain volume and scaled using the given Atlas Scaling Factor (ASF). Then, using the estimated total intracranial values, the brains can be normalized to a standard size for comparison.
+
         """)
 
     with col2:
@@ -100,15 +106,7 @@ def render_overview():
                     
                     num_slices = data.shape[slice_axis]
                     
-                    # Navigation
-                    c1, c2, c3 = st.columns([1,1,1])
-                    if c1.button("◀ Prev Slice", key="overview_prev"):
-                        st.session_state.mri_slice_idx = max(0, st.session_state.mri_slice_idx - 1)
-                    if c2.button("⏯ Play/Pause 3D", key="overview_play"):
-                        st.session_state.mri_play = not st.session_state.mri_play
-                    if c3.button("Next ▶ Slice", key="overview_next"):
-                        st.session_state.mri_slice_idx = min(num_slices - 1, st.session_state.mri_slice_idx + 1)
-                    
+                    # Slider above image
                     st.slider(f"{st.session_state.mri_view} Slice",
                               0, num_slices - 1,
                               key="overview_mri_slider",
@@ -120,13 +118,29 @@ def render_overview():
                     slices[slice_axis] = st.session_state.mri_slice_idx
                     slice_data = data[tuple(slices)]
                     
-                    fig, ax = plt.subplots(figsize=(3,3))
+                    # Display image
+                    fig, ax = plt.subplots(figsize=(5,5))
                     ax.imshow(slice_data.T, cmap="twilight_shifted", origin="lower")
                     ax.axis("off")
                     st.pyplot(fig)
                     
+                    # Navigation buttons below image
+                    c1, c2, c3 = st.columns([1,1,1])
+                    if c1.button("◀ Prev", key="overview_prev"):
+                        st.session_state.mri_slice_idx = max(0, st.session_state.mri_slice_idx - 1)
+                        st.session_state.mri_play = False
+                        st.rerun()
+                    if c2.button("▶ Play" if not st.session_state.mri_play else "⏸ Pause", key="overview_play"):
+                        st.session_state.mri_play = not st.session_state.mri_play
+                        st.rerun()
+                    if c3.button("Next ▶", key="overview_next"):
+                        st.session_state.mri_slice_idx = min(num_slices - 1, st.session_state.mri_slice_idx + 1)
+                        st.session_state.mri_play = False
+                        st.rerun()
+                    
+                    # Auto-advance if playing
                     if st.session_state.mri_play:
-                        time.sleep(0.10)
+                        time.sleep(0.08)
                         st.session_state.mri_slice_idx = (st.session_state.mri_slice_idx + 1) % num_slices
                         st.rerun()
                 except Exception as e:
