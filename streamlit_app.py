@@ -5,12 +5,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import os
-import math
 import time
 from pathlib import Path
-from typing import List
-from PIL import Image
 import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy.optimize
@@ -20,7 +16,7 @@ try:
     import nibabel as nib
 
     MRI_ENABLED = True
-except:
+except Exception:
     MRI_ENABLED = False
 
 ###############################################################
@@ -46,7 +42,7 @@ def get_data(filename=None):
         filename = Path(__file__).parent / "data/final_data_oasis.csv"
     try:
         return pd.read_csv(filename)
-    except:
+    except Exception:
         return None
 
 
@@ -81,34 +77,34 @@ def render_overview():
         st.subheader("About")
         st.write(
             """
-        Dementia is a neurodegenerative disease that impacts millions of people around 
-                 the world. Currently, the average time to diagnosis is 3.5 years [1]. 
+        Dementia is a neurodegenerative disease that impacts millions of people around
+                 the world. Currently, the average time to diagnosis is 3.5 years [1].
                  This delay reduces the treatment options available, as many treatments
                   that slow disease progression are only effective in the early stages.
                   Brain MRIs may offer a way to improve early diagnosis and track disease
-                  progression, as some brain changes can be seen years before symptoms develop 
-                 [2]. Neuroinflammation is a likely part of the pathogenesis of Alzheimer’s, 
-                 and it can be seen on MRIs [3][4]. Additionally, loss of brain volume over 
+                  progression, as some brain changes can be seen years before symptoms develop
+                 [2]. Neuroinflammation is a likely part of the pathogenesis of Alzheimer’s,
+                 and it can be seen on MRIs [3][4]. Additionally, loss of brain volume over
                  time is a known feature of dementia.
 
 Our goal was to examine the relationship between brain volume and dementia status using data
                   from the OASIS (Open Access Series of Imaging Studies) project [5]. The OASIS
-                  project dataset we used contained three-dimensional MRI scan files as well as 
+                  project dataset we used contained three-dimensional MRI scan files as well as
                  information about each patient’s dementia status as measured by clinical dementia
-                  rating (CDR) and demographic information such as age and gender. The MRI viewer 
-                 on the right displays cross-sectional brain scans that allow you to explore the 
-                 anatomy captured in this dataset. 
+                  rating (CDR) and demographic information such as age and gender. The MRI viewer
+                 on the right displays cross-sectional brain scans that allow you to explore the
+                 anatomy captured in this dataset.
 
-To calculate the brain volumes, we used two separate methods in a similar process. We started 
-                 by creating a list of all the MRI brain scans for which we have clinical data 
-                 for. Looping through that list, we utilized two modules imported from the 
-                 ANTsPyNet framework: ‘brain_extraction’ and ‘deep_atropos’. These utilities 
-                 were used to generate a probability map of brain-like voxels. 
+To calculate the brain volumes, we used two separate methods in a similar process. We started
+                 by creating a list of all the MRI brain scans for which we have clinical data
+                 for. Looping through that list, we utilized two modules imported from the
+                 ANTsPyNet framework: ‘brain_extraction’ and ‘deep_atropos’. These utilities
+                 were used to generate a probability map of brain-like voxels.
 
-These maps were used to segment the images and sum up all the desired voxels representing 
+These maps were used to segment the images and sum up all the desired voxels representing
                  brain regions. Then, these voxels were multiplied by a known voxel spacing
                   to obtain the brain volume and scaled using the given Atlas Scaling Factor
-                  (ASF). Then, using the estimated total intracranial values, the brains 
+                  (ASF). Then, using the estimated total intracranial values, the brains
                  can be normalized to a standard size for comparison.
 
         """
@@ -215,21 +211,53 @@ def render_oasis():
   In their words, “The Open Access Series of Imaging Studies (OASIS) is a project
               aimed at making neuroimaging data sets of the brain freely available
               to the scientific community. By compiling and freely distributing
-              neuroimaging data sets, we hope to facilitate future discoveries in 
+              neuroimaging data sets, we hope to facilitate future discoveries in
              basic and clinical neuroscience,” [5]. The data in these datasets were
-              gathered from the Knight ADRC and affiliated studies. Participants 
+              gathered from the Knight ADRC and affiliated studies. Participants
              include both men and women. All the datasets controlled for handedness,
               choosing to only include right-handed participants. Right and left-handed
               brains have different asymmetry patterns, which would not affect our study
                 on brain volume but may affect other studies searching for specific
                   patterns within the images themselves [6].
 
-For our project, we used the OASIS-1 dataset, which included 416 participants aged 18 
-to 96. Three to four MRI scans taken at the same time were included for each participant. All of the scans were T-1 weighted. T-1 weighting is very common in brain MRIs as it allows for different tissues such as bone, fat, and grey matter to be distinguished. Of the 416 participants, 100 were clinically diagnosed with dementia, and 20 non-demented participants were imaged on a subsequent visit within 90 days of the initial session to use as a reliability dataset.
+For our project, we used the OASIS-1 dataset, which included 416 participants aged 18
+to 96. Three to four MRI scans taken at the same time were included for each participant.
+ All of the scans were T-1 weighted. T-1 weighting is very common in brain MRIs as it
+ allows for different tissues such as bone, fat, and grey matter to be distinguished.
+ Of the 416 participants, 100 were clinically diagnosed with dementia, and 20 non-demented
+   participants were imaged on a subsequent visit within 90 days of the initial session to
+   use as a reliability dataset.
 
-In addition to the brain scans, sex, handedness, age, education level, socioeconomic status, mini-mental state examination (MMSE), clinical dementia rating (CDR), estimated total intracranial volume, normalized whole brain volume, and ATLAS scaling factor were recorded for each participant. CDR and MMSE are tools used to gauge the stage of dementia. We chose to focus on CDR. To obtain CDR, physicians conduct a semi-structured interview with the patient and a reliable informant such as a family member to assess six domains of cognitive and functional performance: memory, orientation, judgment and problem-solving, community affairs, home and hobbies, and personal care. CDR is graded on a scale from 0-3, with 0 indicating no symptoms of dementia and 3 indicating severe dementia. In contrast, higher scores on the MMSE, scaled 0-30, indicate less cognitive impairment. The OASIS study used ATLAS scaling to account for differences in head size before calculating the normalized whole brain volume for each participant.
+In addition to the brain scans, sex, handedness, age, education level, socioeconomic
+status, mini-mental state examination (MMSE), clinical dementia rating (CDR), estimated
+ total intracranial volume, normalized whole brain volume, and ATLAS scaling factor were
+   recorded for each participant. CDR and MMSE are tools used to gauge the stage of
+     dementia. We chose to focus on CDR. To obtain CDR, physicians conduct a semi-
+     structured interview with the patient and a reliable informant such as a family
+       member to assess six domains of cognitive and functional performance: memory,
+        orientation, judgment and problem-solving, community affairs, home and hobbies,
+        and personal care. CDR is graded on a scale from 0-3, with 0 indicating no
+        symptoms of dementia and 3 indicating severe dementia. In contrast, higher
+        scores on the MMSE, scaled 0-30, indicate less cognitive impairment. The
+        OASIS study used ATLAS scaling to account for differences in head size before
+        calculating the normalized whole brain volume for each participant.
 
-We used the gain field corrected ATLAS registered transverse brain scans for our project. If we had more time, we would have calculated total brain volume directly from the raw MRI scans rather than relying on the ATLAS registered images. The ATLAS registered scans provided by OASIS are warped to a common template to simplify segmentation and cross-subject comparison, which is why we used them for this time limited project. However, using only these pre-registered images limited our ability to compute certain measures, including estimated total intracranial volume (eTIV). A more rigorous approach would involve starting with the raw MRIs, performing our own ATLAS registration for segmentation, and lastly converting the segmented scans back into their normal space to calculate the brain volume and total intracranial volume. This workflow would increase accuracy and allow us to independently compute eTIV instead of relying on the values produced by the OASIS pipeline. In the future, we could examine how brain volume changes over time using the OASIS-2 dataset and evaluate how those changes relate to CDR scores. Longitudinal analysis would allow us to determine whether progressive brain atrophy correlates with higher CDR ratings and worsening cognitive impairment.
+We used the gain field corrected ATLAS registered transverse brain scans for our project.
+ If we had more time, we would have calculated total brain volume directly from the raw
+ MRI scans rather than relying on the ATLAS registered images. The ATLAS registered
+ scans provided by OASIS are warped to a common template to simplify segmentation
+   and cross-subject comparison, which is why we used them for this time limited
+   project. However, using only these pre-registered images limited our ability to
+   compute certain measures, including estimated total intracranial volume (eTIV).
+   A more rigorous approach would involve starting with the raw MRIs, performing our
+     own ATLAS registration for segmentation, and lastly converting the segmented
+     scans back into their normal space to calculate the brain volume and total
+     intracranial volume. This workflow would increase accuracy and allow us to
+     independently compute eTIV instead of relying on the values produced by the
+     OASIS pipeline. In the future, we could examine how brain volume changes over
+     time using the OASIS-2 dataset and evaluate how those changes relate to CDR scores.
+     Longitudinal analysis would allow us to determine whether progressive brain atrophy
+     correlates with higher CDR ratings and worsening cognitive impairment.
 """
     )
 
@@ -242,14 +270,14 @@ def render_code():
     st.write(
         """
     Brain Volumetric Pipeline - Code demonstrating various methods of calculating and normalizing brain volume from MRI scans.
-    
-    There are various methods of calculating and normalizing the volume of a brain from an MRI. 
+
+    There are various methods of calculating and normalizing the volume of a brain from an MRI.
     The following is the code that was used to do this in two different ways for our project:
     - Brain Extraction using ANTsPyNet.utilities.brain_extraction
     - Brain Extraction using ANTsPyNet.utilities.deep_atropos
-    
+
     Both of these methods use deep learning models to predict and segment different types of tissue in an MRI scan.
-    
+
     Included is also some exploratory code for visualizing the images and data.
     """
     )
@@ -279,7 +307,7 @@ path = "path/to/OASIS_selected/"
 Dementia_path = "path/to/oasis_cross-sectional.csv"
 
 # Load in dataframe
-oasis_crossref = pd.read_csv(Dementia_path) 
+oasis_crossref = pd.read_csv(Dementia_path)
 oasis_crossref = oasis_crossref.dropna(subset=['CDR'])
 """,
         language="python",
@@ -297,7 +325,7 @@ img = nib.load(path_ex)
 data = img.get_fdata()
 
 # Display a middle slice
-plt.imshow(data[:, :, data.shape[2]-95], cmap='twilight_shifted') 
+plt.imshow(data[:, :, data.shape[2]-95], cmap='twilight_shifted')
 plt.axis('off')
 plt.title('Example slice image of Brain')
 plt.show()
@@ -326,12 +354,12 @@ Ids = oasis_crossref['ID']
         """
     With that, we can loop through all the brains, calculate each volume, and list them out.
     To do said calculations, we'll start by defining functions for each method.
-    
-    **Note:** It is with a heavy heart that these methods are flawed. By calculating the volumes of the ATLAS Registered images, 
-    the volumes will be warped. The Atlas Scaling Factor (ASF) lets us convert back to natural space, but calculating the volume 
-    in ATLAS space leads to stretching/warping of values. Therefore if this project were done professionally, we would experience 
+
+    **Note:** It is with a heavy heart that these methods are flawed. By calculating the volumes of the ATLAS Registered images,
+    the volumes will be warped. The Atlas Scaling Factor (ASF) lets us convert back to natural space, but calculating the volume
+    in ATLAS space leads to stretching/warping of values. Therefore if this project were done professionally, we would experience
     errors here. However, this process does a good job of estimating the normalized Whole Brain Volume and isn't terribly erroneous.
-    
+
     *(If we wanted to correct this in the future and do it correctly, we would need to start in natural space and register to ATLAS space manually.)*
     """
     )
@@ -344,18 +372,18 @@ Ids = oasis_crossref['ID']
         '''
 def brain_extraction_method(img):
     """Uses Ants.brain_extract to find brain volume of inputted MRI image"""
-    
-    # Create probability map 
-    prob_brain_mask = brain_extraction(img, modality="t1", verbose=True)  
+
+    # Create probability map
+    prob_brain_mask = brain_extraction(img, modality="t1", verbose=True)
     brain_mask = ants.threshold_image(prob_brain_mask, 0.5, 1e9, 1, 0)
-    
+
     # Sum up segmented voxels
     pixel_count = int(brain_mask.numpy().astype(bool).sum())
-    
-    # Calculate the volumes using voxel spacing 
+
+    # Calculate the volumes using voxel spacing
     voxel_volume = float(np.prod(img.spacing))
     volume = pixel_count * voxel_volume
-    
+
     return pixel_count, volume
 ''',
         language="python",
@@ -365,7 +393,7 @@ def brain_extraction_method(img):
     st.write(
         """
     Six-tissue segmentation using deep learning.
-    
+
     Labeling:
     - Label 0: background
     - Label 1: CSF
@@ -380,9 +408,9 @@ def brain_extraction_method(img):
         '''
 def atropos_segmentation(img, pre):
     """Uses deep atropos segmentation to calculate brain volume"""
-    
+
     # Segment the brain
-    seg = deep_atropos(img, do_preprocessing=pre) 
+    seg = deep_atropos(img, do_preprocessing=pre)
     seg_img = seg['segmentation_image']
     seg_np = seg_img.numpy().astype(int)
 
@@ -393,7 +421,7 @@ def atropos_segmentation(img, pre):
     # Calculate volume using voxel spacing
     voxel_volume = float(np.prod(img.spacing))
     volume = pixel_count * voxel_volume
-    
+
     return pixel_count, volume
 ''',
         language="python",
@@ -414,15 +442,15 @@ volumes_deep_atropos = np.zeros(len(Ids))
 # Loop through all brain scans
 for i in range(len(Ids)):
     current_Id = Ids.iloc[i]
-    
+
     # Load the image
     raw_img_ants = ants.image_read(filepath, reorient='IAL')
     raw_img_ants.set_spacing((1,1,1))
-    
+
     # Run volume calculations
     pixel_counts_brain_extraction[i], volumes_brain_extraction[i] = \\
         brain_extraction_method(raw_img_ants)
-    
+
     pixel_counts_deep_atropos[i], volumes_deep_atropos[i] = \\
         atropos_segmentation(raw_img_ants, pre=False)
 """,
@@ -433,14 +461,14 @@ for i in range(len(Ids)):
     st.write(
         """
     With the volumes calculated, now we need to normalize them!
-    
+
     From *Buckner et al. 2004*, we know the following:
     - Estimated total intracranial volume (eTIV) is a fully automated estimate of TIVₙₐₜ (Total Intracranial Volume in natural space)
     - Total Intracranial Volume in ATLAS space (TIVₐₜₗ) divided by the ATLAS scaling factor (ASF) yields TIVₙₐₜ
     - The same relations apply to Volume (atl and nat)
-    - Normalized Whole Brain Volume (nWBV) is the automated tissue segmentation based estimate of brain volume (gray-plus white-matter). 
+    - Normalized Whole Brain Volume (nWBV) is the automated tissue segmentation based estimate of brain volume (gray-plus white-matter).
       Normalized to percentage based on the atlas target mask.
-    
+
     Therefore, we obtain the following equations and relations:
     """
     )
@@ -473,8 +501,8 @@ oasis_crossref['nWBV_deep_atropos'] = \\
 
     st.write(
         """
-    **Note:** The following dataframe will have misaligned variable names as defined above. This is because the displayed df below 
-    was not created by this chunk of code. It was copied over from an older example, and re-running the code to recreate the values 
+    **Note:** The following dataframe will have misaligned variable names as defined above. This is because the displayed df below
+    was not created by this chunk of code. It was copied over from an older example, and re-running the code to recreate the values
     would be more than tedious.
     """
     )
@@ -496,7 +524,7 @@ Data = pd.read_csv(csv_data)
     - nWBV is the normalized brain volume from the original data set just for comparison and correctness
     - Clinical Dementia Rating (CDR) when compared with the nWBVs allows us to find out if CDR and brain volume are related in any ways
     - We can also see how CDR, Brain Volume, Age, Sex and other demographic data are related
-    
+
     The below code includes some visualization plots for example.
     """
     )
@@ -504,7 +532,7 @@ Data = pd.read_csv(csv_data)
     st.subheader("Visualization: CDR vs nWBV")
     st.write(
         """
-    This first one below is box and whisker for CDR vs nWBV. In theory this will show our biggest question/curiosity with this 
+    This first one below is box and whisker for CDR vs nWBV. In theory this will show our biggest question/curiosity with this
     project with regards to whether dementia and brain volume correlate.
     """
     )
@@ -547,9 +575,9 @@ plt.show()
     st.write(
         """
     While for the above plots we've used the nWBV values that were given with the OASIS 1 dataset, we wanted to find these on our own for this project, and have done so.
-    
+
     The question remains of how effectively the brain_extraction method and the deep_atropos methods approximate nWBV.
-    
+
     We can compare them visually by looking again at nWBV vs CDR, but with the 3 different methods.
     """
     )
@@ -702,9 +730,9 @@ def render_data_and_graphs():
         ]
     )
 
-    ##########################################################
+    ###########################################################
     # TAB 1: HISTOGRAMS
-    ##########################################################
+    ###########################################################
     with tab1:
         st.markdown(
             "<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Distribution of Brain Volume</p>",
@@ -734,9 +762,9 @@ def render_data_and_graphs():
             """Add your explanation here about the histogram distributions."""
         )
 
-    ##########################################################
+    ###########################################################
     # TAB 2: MEAN ± SEM PLOTS
-    ##########################################################
+    ###########################################################
     with tab2:
         st.markdown(
             "<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Average Brain Volume by CDR - Bar Chart</p>",
@@ -782,9 +810,9 @@ def render_data_and_graphs():
             """Add your explanation here about average brain volume by CDR."""
         )
 
-    ##########################################################
+    ###########################################################
     # TAB 3: CDR BOXPLOTS
-    ##########################################################
+    ###########################################################
     with tab3:
         if "CDR" in df.columns:
             st.markdown(
@@ -836,9 +864,9 @@ def render_data_and_graphs():
         st.subheader("Explanation of Data Sets and Results")
         st.write("""Add your explanation here about brain volume by CDR.""")
 
-    ##########################################################
+    ###########################################################
     # TAB 4: SCATTERPLOTS + CHI-SQUARED REGRESSION
-    ##########################################################
+    ###########################################################
     with tab4:
         st.markdown(
             "<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Brain Volume vs Age — Chi-Squared Linear Regression</p>",
@@ -1023,9 +1051,9 @@ def render_data_and_graphs():
         st.subheader("Explanation of Results")
         st.write("""Add interpretation here.""")
 
-    ##########################################################
+    ###########################################################
     # TAB 5: MMSE SCATTERPLOTS
-    ##########################################################
+    ###########################################################
     with tab5:
         mmse = next((c for c in ["MMSE", "mmse"] if c in df.columns), None)
         if mmse:
@@ -1130,15 +1158,15 @@ def render_references():
     st.write(
         """
     [1] Olubunmi Kusoro, M. Roche, R. Del‐Pino‐Casado, P. Leung, and V. Orgeta, "Time to Diagnosis in Dementia: A Systematic Review With Meta‐Analysis," International Journal of Geriatric Psychiatry, vol. 40, no. 7, Jul. 2025, doi: https://doi.org/10.1002/gps.70129.
-    
+
     [2] "Brain Changes Linked With Alzheimer's Years Before Symptoms Appear," Hopkinsmedicine.org, 2019. https://www.hopkinsmedicine.org/news/newsroom/news-releases/2019/05/brain-changes-linked-with-alzheimers-years-before-symptoms-appear
-    
+
     [3] "Alzheimer's Disease (AD) & Neuroinflammation | Decoding AD," Decodingalzheimersdisease.com, 2024. https://www.decodingalzheimersdisease.com/role-of-neuroinflammation.html#the-science
-    
+
     [4] M. Quarantelli, "MRI/MRS in neuroinflammation: methodology and applications," Clinical and Translational Imaging, vol. 3, no. 6, pp. 475–489, Sep. 2015, doi: https://doi.org/10.1007/s40336-015-0142-y.
-    
+
     [5] "Open Access Series of Imaging Studies (OASIS)," Open Access Series of Imaging Studies (OASIS). https://sites.wustl.edu/oasisbrains/
-    
+
     [6] M. Li et al., "Handedness- and Hemisphere-Related Differences in Small-World Brain Networks: A Diffusion Tensor Imaging Tractography Study," Brain Connectivity, vol. 4, no. 2, pp. 145–156, Mar. 2014, doi: https://doi.org/10.1089/brain.2013.0211.
     """
     )
