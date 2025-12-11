@@ -723,11 +723,19 @@ def render_data_and_graphs():
                 
                 # Fit for men
                 if len(men) > 1:
+                    # Get data range for adaptive initial guess
+                    y_mean = men[m].mean()
+                    y_range = men[m].max() - men[m].min()
+                    
+                    # Use numpy polyfit as initial guess
+                    z = np.polyfit(men[age_col].values, men[m].values, 1)
+                    init_slope, init_intercept = z[0], z[1]
+                    
                     men_ans = scipy.optimize.minimize(
                         chi_squared, 
-                        [-0.003, 0.8], 
+                        [init_slope, init_intercept], 
                         args=(men[m].values, men[age_col].values),
-                        bounds=[(-0.1, 0), (0.5, 1)]
+                        bounds=[(-0.01, 0.01), (y_mean - y_range, y_mean + y_range)]
                     )
                     men_m, men_b = men_ans.x[0], men_ans.x[1]
                     men_chi2 = men_ans.fun
@@ -736,11 +744,19 @@ def render_data_and_graphs():
                 
                 # Fit for women
                 if len(women) > 1:
+                    # Get data range for adaptive initial guess
+                    y_mean = women[m].mean()
+                    y_range = women[m].max() - women[m].min()
+                    
+                    # Use numpy polyfit as initial guess
+                    z = np.polyfit(women[age_col].values, women[m].values, 1)
+                    init_slope, init_intercept = z[0], z[1]
+                    
                     women_ans = scipy.optimize.minimize(
                         chi_squared, 
-                        [-0.003, 0.8], 
+                        [init_slope, init_intercept], 
                         args=(women[m].values, women[age_col].values),
-                        bounds=[(-0.1, 0), (0.5, 1)]
+                        bounds=[(-0.01, 0.01), (y_mean - y_range, y_mean + y_range)]
                     )
                     women_m, women_b = women_ans.x[0], women_ans.x[1]
                     women_chi2 = women_ans.fun
