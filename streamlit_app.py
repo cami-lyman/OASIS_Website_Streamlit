@@ -628,83 +628,15 @@ def render_data_and_graphs():
         st.write("""Add your explanation here about brain volume by CDR.""")
 
     ##########################################################
-    # TAB 4: SCATTERPLOTS + REGRESSION LINES
+    # TAB 4: SCATTERPLOTS + CHI-SQUARED REGRESSION
     ##########################################################
     with tab4:
-        st.markdown("<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Brain Volume vs Age — Scatterplots</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:18px; font-weight:normal; margin-bottom:1rem;'>Brain Volume vs Age — Chi-Squared Linear Regression</p>", unsafe_allow_html=True)
 
         age_col = next((c for c in ["AGE","Age","age"] if c in df.columns), None)
         sex_col = next((c for c in ["M/F","SEX","Sex","sex","Gender","gender"] if c in df.columns), None)
 
         if age_col and sex_col:
-            fig, axes = plt.subplots(1, len(available), figsize=(8 * len(available), 5))
-            if len(available) == 1:
-                axes = [axes]
-
-            # Legend handles
-            female_handle = plt.Line2D([], [], marker='o', color='red', linestyle='None', label='Female')
-            male_handle = plt.Line2D([], [], marker='o', color='blue', linestyle='None', label='Male')
-
-            def sx(x):
-                s = str(x).strip().lower()
-                if s in ["f", "female"]: return "red"
-                if s in ["m", "male"]: return "blue"
-                return "gray"
-
-            for i, m in enumerate(available):
-                d = df[[age_col, m, sex_col]].dropna()
-                colors = d[sex_col].map(sx)
-
-                axes[i].scatter(d[age_col], d[m], c=colors, edgecolor="k", alpha=0.8)
-
-                # Regression lines (without annotations)
-                for sex, color, label in [("f", "red", "Female"), ("m", "blue", "Male")]:
-                    sd = d[d[sex_col].str.lower().str.contains(sex)]
-
-                    if len(sd) > 1:
-                        # best fit line
-                        z = np.polyfit(sd[age_col], sd[m], 1)
-                        p = np.poly1d(z)
-
-                        # Plot regression
-                        xx = np.linspace(sd[age_col].min(), sd[age_col].max(), 100)
-                        axes[i].plot(xx, p(xx), color=color, linestyle="--")
-
-                axes[i].set_title(method_labels[m], fontsize=20)
-                axes[i].set_xlabel(age_col, fontsize=16)
-                axes[i].set_ylabel("Brain Volume (mm³)", fontsize=16)
-                axes[i].legend(handles=[female_handle, male_handle], fontsize=12)
-
-            st.pyplot(fig)
-            
-            # Display regression statistics in tables
-            st.subheader("Regression Line Statistics")
-            for m in available:
-                st.write(f"**{method_labels[m]}:**")
-                d = df[[age_col, m, sex_col]].dropna()
-                
-                regression_data = []
-                for sex, label in [("f", "Female"), ("m", "Male")]:
-                    sd = d[d[sex_col].str.lower().str.contains(sex)]
-                    stats = calc_regression_stats(sd[age_col], sd[m])
-                    if stats:
-                        regression_data.append({
-                            "Sex": label,
-                            "Slope": f"{stats['slope']:.4f}",
-                            "Intercept": f"{stats['intercept']:.4f}",
-                            "Equation": f"y = {stats['slope']:.4f}x + {stats['intercept']:.4f}",
-                            "R²": f"{stats['r2']:.3f}",
-                            "Sample Size": len(sd)
-                        })
-                
-                if regression_data:
-                    reg_df = pd.DataFrame(regression_data)
-                    st.dataframe(reg_df, hide_index=True)
-                st.write("")
-            
-            # Chi-Squared Linear Regression Section
-            st.markdown("---")
-            st.subheader("Chi-Squared Linear Regression Analysis")
             st.write("""Manual linear regression using chi-squared minimization for parameter estimation.""")
             
             # Create side-by-side regression plots
