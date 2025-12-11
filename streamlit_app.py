@@ -709,11 +709,10 @@ def render_data_and_graphs():
                     axes_chi[i].plot(age_range, women_fit, color='red', linewidth=2, linestyle='--')
                 
                 axes_chi[i].set_title(method_labels[m], fontsize=20)
-                axes_chi[i].set_xlabel('Age', fontsize=16)
-                axes_chi[i].set_ylabel('Brain Volume', fontsize=16)
+                axes_chi[i].set_xlabel('Age (Years)', fontsize=16)
+                axes_chi[i].set_ylabel('Brain Volume (mm³)', fontsize=16)
                 axes_chi[i].tick_params(labelsize=14)
                 axes_chi[i].legend(fontsize=12)
-                axes_chi[i].grid(True, alpha=0.3)
                 
                 chi_results[m] = {
                     'men': {'slope': men_m, 'intercept': men_b, 'chi2': men_chi2, 'n': len(men)},
