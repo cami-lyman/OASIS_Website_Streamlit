@@ -714,7 +714,7 @@ def render_data_and_graphs():
         def plot_hist(df, method, ax, label, color):
             sns.histplot(df[method].dropna(), bins=20, ax=ax, color=color)
             ax.set_title(label, fontsize=20)
-            ax.set_xlabel("Brain Volume (mm³)", fontsize=16)
+            ax.set_xlabel("Brain Volume", fontsize=16)
             ax.set_ylabel("# Participants", fontsize=16)
             ax.tick_params(labelsize=14)
             ax.set_ylim(0, None)
@@ -766,7 +766,7 @@ def render_data_and_graphs():
                 )
                 ax.set_title(label, fontsize=20)
                 ax.set_xlabel("CDR", fontsize=16)
-                ax.set_ylabel("Brain Volume (mm³)", fontsize=16)
+                ax.set_ylabel("Brain Volume", fontsize=16)
                 ax.tick_params(labelsize=14)
                 ax.set_ylim(0.6, 0.9)
 
@@ -813,7 +813,7 @@ CDR = 2 group and thus conclusions are difficult to make from this group."""
                 sns.boxplot(x="CDR", y=method, data=df, ax=ax, color=color)
                 ax.set_title(label, fontsize=20)
                 ax.set_xlabel("CDR", fontsize=16)
-                ax.set_ylabel("Brain Volume (mm³)", fontsize=16)
+                ax.set_ylabel("Brain Volume", fontsize=16)
                 ax.tick_params(labelsize=14)
                 ax.set_ylim(*ylims)
 
@@ -993,7 +993,7 @@ CDR = 2 group and thus conclusions are difficult to make from this group."""
 
                 axes_chi[i].set_title(method_labels[m], fontsize=20)
                 axes_chi[i].set_xlabel("Age (Years)", fontsize=16)
-                axes_chi[i].set_ylabel("Brain Volume (mm³)", fontsize=16)
+                axes_chi[i].set_ylabel("Brain Volume", fontsize=16)
                 axes_chi[i].tick_params(labelsize=14)
                 axes_chi[i].legend(fontsize=12)
 
@@ -1221,7 +1221,7 @@ Comparing the three brain volume calculation methods:
 - The Deep Atropos method's more specific tissue classification didn't dramatically change 
                 the clinical associations
 
-## Limitations
+### Limitations
 
 While our analysis was successful, several limitations should be noted:
 
@@ -1236,11 +1236,11 @@ While our analysis was successful, several limitations should be noted:
     """)
     
     st.markdown("""
-# Future Directions
+### Future Directions
 
 A single semester project provided a strong foundation for exploring brain volume and dementia relationships, but there are numerous avenues for deeper investigation if more time were available.
 
-## 1. Improved Volume Calculation Methodology
+### 1. Improved Volume Calculation Methodology
 
 **Starting from Natural Space:**
 The most significant methodological improvement would be to calculate brain volumes in natural (patient-specific) space rather than ATLAS-registered space. The workflow would be:
@@ -1253,7 +1253,7 @@ The most significant methodological improvement would be to calculate brain volu
 
 This approach would eliminate the warping artifacts introduced by calculating volume in ATLAS space, giving more accurate overall results.
 
-## 2. Longitudinal Analysis with OASIS-2
+### 2. Longitudinal Analysis with OASIS-2
 
 **Tracking Brain Volume Changes Over Time:**
 The OASIS-2 dataset contains longitudinal data where the same individuals were scanned multiple times over several years. This would allow us to:
