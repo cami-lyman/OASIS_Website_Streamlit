@@ -731,7 +731,14 @@ def render_data_and_graphs():
         st.markdown("---")
         st.subheader("Explanation of Data Sets and Results")
         st.write(
-            """Add your explanation here about the histogram distributions."""
+            """The original data ranged from about 65% to 85% of total intracranial 
+            volume, while the Brain Extraction consistently produced
+              larger volumes ranging from roughly 75% to 95%, and the
+                Deep Atropos produced smaller brain volumes ranging from 
+                roughly 55% to 80%. The shape of the distribution of brain volumes
+                  is more similar between the orginal data and the Brain Extraction
+                    data, which aligns with our overall results of Brain Extraction
+                      being more similar to the original data than Deep Atropos."""
         )
 
     ##########################################################
@@ -779,7 +786,15 @@ def render_data_and_graphs():
         st.markdown("---")
         st.subheader("Explanation of Data Sets and Results")
         st.write(
-            """Add your explanation here about average brain volume by CDR."""
+            """A welsh 2-sampled t-test was performed  with this data showing 
+            no stastitical difference for any of the methods when comparing a 
+            CDR of 0 to a CDR of 2. However the original and brain extraction 
+            method did show statistical significance between a CDR of 0 and a 
+            CDR of 1 with their p-values both being less than 0.05, unlike deep
+              atropos (p = 0.644).
+
+It is important to note that there were only two data points within the 
+CDR = 2 group and thus conclusions are difficult to make from this group."""
         )
 
     ##########################################################
@@ -834,7 +849,14 @@ def render_data_and_graphs():
 
         st.markdown("---")
         st.subheader("Explanation of Data Sets and Results")
-        st.write("""Add your explanation here about brain volume by CDR.""")
+        st.write("""With these plots made, the Kruskal-Wallis test, 
+                 which is a non-parametric statistical test used to 
+                 compare three or more independent groups to see if their 
+                 distributions are the same when data isn't normally 
+                 distributed, was performed. The p-values were much less than 0.05 for the original and brain extraction 
+                 data but was 0.322 for the deep atropos, showing there 
+                 was a difference between CDR and brain volume for the 
+                 original data and brain extraction but not for deep atropos.""")
 
     ##########################################################
     # TAB 4: SCATTERPLOTS + CHI-SQUARED REGRESSION
@@ -1021,7 +1043,16 @@ def render_data_and_graphs():
 
         st.markdown("---")
         st.subheader("Explanation of Results")
-        st.write("""Add interpretation here.""")
+        st.markdown("""Both the original data and brain extraction show a distinct 
+                 correlation between brain volume and age, with smaller brains 
+                 associated with older age. Deep atropos also shows this trend very weakly.
+                 We also used an ANCOVA model to determine whether there was a statistically 
+                 significant difference between the regression lines for men and women.
+                 **ANCOVA Results/Interpretation:** The Age:MF[T.M] line refers to the relationship 
+                 between the two slopes. The p-value for the original data was 0.334, for brain 
+                 extraction 0.310, and for deep atropos 0.085. Since these are all greater than 0.05, 
+                 we conclude that there is no significant difference between the rate of age-related 
+                 brain atrophy for males and females.""")
 
     ##########################################################
     # TAB 5: MMSE SCATTERPLOTS
@@ -1114,12 +1145,133 @@ def render_data_and_graphs():
 
 
 def render_conclusions():
-    st.header("Conclusions", divider="blue")
-    st.write(
-        """
-    (Your full conclusions text preserved exactly)
-    """
-    )
+    st.header("Conclusions and Discussion", divider="blue")
+    
+    st.markdown("""
+
+### Key Findings
+
+Through our analysis of the OASIS dataset using two different brain segmentation methods,
+                 we uncovered several important relationships between brain volume and 
+                clinical measures of dementia:
+
+### 1. Brain Volume and Clinical Dementia Rating (CDR)
+
+The boxplot comparisons across all three methods (OASIS nWBV, Brain Extraction, and Deep
+                 Atropos) reveal a clear trend: **higher CDR scores (indicating more severe 
+                dementia) are associated with lower brain volumes**. This relationship held 
+                consistently across all three measurement methods, providing strong evidence
+                 for brain atrophy as a correlate of cognitive decline.
+
+- CDR 0 (no dementia): Highest median brain volume with relatively tight distribution
+- CDR 0.5 (very mild): Slight decrease in median volume with more variability
+- CDR 1-2 (mild to moderate): Progressively lower brain volumes
+
+This finding aligns with established neuroscience literature showing that neurodegenerative
+                 diseases like Alzheimer's lead to progressive loss of brain tissue, particularly
+                 in regions important for memory and cognition.
+
+### 2. Age and Sex Effects on Brain Volume
+
+Our chi-squared regression analysis revealed important demographic patterns:
+
+**Age Effects:**
+- Both males and females show negative slopes (brain volume decreases with age)
+- This confirms that some degree of brain atrophy is a normal part of aging
+
+**Sex Differences:**
+- The rate of age-related decline (slope) appears similar between sexes
+
+**Statistical Robustness:**
+- The chi² values indicate good fits for the regression models
+- Consistency across three independent methods strengthens confidence in the results
+- Separate male and female analyses control for sex as a confounding variable
+
+### 3. Method Comparison
+
+Comparing the three brain volume calculation methods:
+
+**OASIS nWBV (Original):**
+- Gold standard provided by the OASIS researchers
+- Uses their validated pipeline with ATLAS registration
+
+**Brain Extraction Method:**
+- Our simpler U-Net based approach
+- Shows similar trends to OASIS nWBV
+- Slightly different absolute values due to different tissue classification thresholds
+
+**Deep Atropos Method:**
+- More sophisticated six-tissue segmentation
+- Excludes CSF and focuses on gray/white matter
+- May provide more specific measure of actual neural tissue
+
+### Did We Get Expected Results?
+
+**Yes, our results aligned with expectations:**
+
+1. Brain volume decreases with age (normal aging)
+2. Lower brain volumes associate with higher dementia severity
+3. Males have larger absolute brain volumes than females
+4. Multiple measurement methods yield consistent conclusions
+
+**Some surprises:**
+
+- The strength of the CDR-volume relationship was quite clear even with this cross-sectional data
+- The consistency between our custom methods and the OASIS ground truth was encouraging
+- The Deep Atropos method's more specific tissue classification didn't dramatically change 
+                the clinical associations
+
+## Limitations
+
+While our analysis was successful, several limitations should be noted:
+
+1. **ATLAS Space Distortion**: Calculating volumes from ATLAS-registered images introduces 
+                warping artifacts. The ASF correction helps but isn't perfect.
+
+2. **Cross-Sectional Design**: We compared different people at one time point, not tracking
+                 individuals over time. Longitudinal data would be stronger for establishing causal relationships.
+
+3. **CDR as Sole Dementia Measure**: While CDR is well-validated, combining it with MMSE 
+                scores and other cognitive assessments would provide richer clinical context.
+    """)
+    
+    st.markdown("""
+# Future Directions
+
+A single semester project provided a strong foundation for exploring brain volume and dementia relationships, but there are numerous avenues for deeper investigation if more time were available.
+
+## 1. Improved Volume Calculation Methodology
+
+**Starting from Natural Space:**
+The most significant methodological improvement would be to calculate brain volumes in natural (patient-specific) space rather than ATLAS-registered space. The workflow would be:
+
+1. Start with raw, unregistered MRI scans
+2. Register to ATLAS space for segmentation
+3. Calculate eTIV using matrix from ATLAS registration
+4. Transform back to natural space and calculate volume from segementation mask
+5. Calculate nWBV
+
+This approach would eliminate the warping artifacts introduced by calculating volume in ATLAS space, giving more accurate overall results.
+
+## 2. Longitudinal Analysis with OASIS-2
+
+**Tracking Brain Volume Changes Over Time:**
+The OASIS-2 dataset contains longitudinal data where the same individuals were scanned multiple times over several years. This would allow us to:
+
+- Measure the *rate* of brain atrophy for each individual
+- Correlate atrophy rates with changes in CDR scores
+- Identify individuals who show accelerated decline
+- Distinguish normal aging from pathological neurodegeneration
+- Build predictive models for cognitive decline
+
+Longitudinal analysis is far more powerful for establishing causal relationships than cross-sectional snapshots.
+
+
+
+## Conclusion
+
+This project demonstrated that computational analysis of neuroimaging data can reveal meaningful relationships between brain structure and cognitive function. The techniques learned in BIOL300/301 such as image processing, statistical analysis, function-based programming, and data visualization, provided the foundation for tackling this complex biological problem. While we've made significant progress in understanding brain volume patterns in dementia, the field of computational neuroscience offers endless opportunities for deeper exploration. The combination of increasingly powerful machine learning methods, growing neuroimaging datasets, and improved biological understanding offers us  opportunities to make real progress in early dementia detection and prevention.
+    """)
 
 
 ###############################################################
