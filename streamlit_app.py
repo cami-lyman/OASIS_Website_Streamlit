@@ -1043,16 +1043,16 @@ CDR = 2 group and thus conclusions are difficult to make from this group."""
 
         st.markdown("---")
         st.subheader("Explanation of Results")
-        st.markdown("""Both the original data and brain extraction show a distinct 
-                 correlation between brain volume and age, with smaller brains 
-                 associated with older age. Deep atropos also shows this trend very weakly.
-                 We also used an ANCOVA model to determine whether there was a statistically 
-                 significant difference between the regression lines for men and women.
-                 **ANCOVA Results/Interpretation:** The Age:MF[T.M] line refers to the relationship 
-                 between the two slopes. The p-value for the original data was 0.334, for brain 
-                 extraction 0.310, and for deep atropos 0.085. Since these are all greater than 0.05, 
-                 we conclude that there is no significant difference between the rate of age-related 
-                 brain atrophy for males and females.""")
+        st.markdown("""Both the original data and the brain extraction method 
+                    show a negative correlation between age and brain volume, 
+                    while the deep atropos method does not show any trend. We 
+                    used an ANCOVA model to determine whether there was a statistically 
+                    significant difference in the rate of age-related brain atrophy 
+                    between males and females. With p-values of 0.334, 0.310, and 0.085 
+                    for the original data, brain extraction, and deep atropos, respectively,
+                     we concluded that there was no significant difference in the rate of 
+                    age-related brain atrophy between males and females.
+""")
 
     ##########################################################
     # TAB 5: MMSE SCATTERPLOTS
@@ -1135,7 +1135,12 @@ CDR = 2 group and thus conclusions are difficult to make from this group."""
         st.markdown("---")
         st.subheader("Explanation of Data Sets and Results")
         st.write(
-            """Add your explanation here about brain volume by MMSE scores."""
+            """ Both the original data and the brain extraction method show a trend
+              of increasing brain volume with increasing Mini-Mental State Examination 
+              (MMSE) score, while the deep atropos method does not show a trend. For MMSE,
+                a lower score indicates greater cognitive impairment. This further supports
+                  our conclusion that smaller brain volume is associated with more severe dementia."""
+
         )
 
 
