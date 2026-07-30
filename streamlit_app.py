@@ -59,6 +59,8 @@ if "mri_view" not in st.session_state:
     st.session_state.mri_view = "Axial"
 if "mri_play" not in st.session_state:
     st.session_state.mri_play = False
+if "overview_mri_slider" not in st.session_state:
+    st.session_state.overview_mri_slider = st.session_state.mri_slice_idx
 
 
 def update_mri_slice():
@@ -142,15 +144,6 @@ These maps were used to segment the images and sum up all the desired voxels rep
 
                     num_slices = data.shape[slice_axis]
 
-                    # Slider above image
-                    st.slider(
-                        f"{st.session_state.mri_view} Slice",
-                        0,
-                        num_slices - 1,
-                        key="overview_mri_slider",
-                        value=st.session_state.mri_slice_idx,
-                        on_change=update_mri_slice,
-                    )
 
                     # Extract slice
                     slices = [slice(None)] * 3
@@ -165,12 +158,32 @@ These maps were used to segment the images and sum up all the desired voxels rep
                     ax.axis("off")
                     st.pyplot(fig)
 
+                    # Apply any pending programmatic slider changes before the widget is created.
+                    if (
+                        "pending_mri_slice_idx" in st.session_state
+                        and st.session_state.pending_mri_slice_idx is not None
+                    ):
+                        st.session_state.mri_slice_idx = st.session_state.pending_mri_slice_idx
+                        st.session_state.overview_mri_slider = st.session_state.pending_mri_slice_idx
+                        st.session_state.pending_mri_slice_idx = None
+
+                    st.slider(
+                        f"{st.session_state.mri_view} Slice",
+                        0,
+                        num_slices - 1,
+                        key="overview_mri_slider",
+                        value=st.session_state.mri_slice_idx,
+                        on_change=update_mri_slice,
+                    )
+
                     # Navigation buttons below image
                     c1, c2, c3 = st.columns([1, 1, 1])
                     if c1.button("◀ Prev", key="overview_prev"):
-                        st.session_state.mri_slice_idx = max(
+                        new_idx = max(
                             0, st.session_state.mri_slice_idx - 1
                         )
+                        st.session_state.mri_slice_idx = new_idx
+                        st.session_state.pending_mri_slice_idx = new_idx
                         st.session_state.mri_play = False
                         st.rerun()
                     if c2.button(
@@ -186,18 +199,20 @@ These maps were used to segment the images and sum up all the desired voxels rep
                         )
                         st.rerun()
                     if c3.button("Next ▶", key="overview_next"):
-                        st.session_state.mri_slice_idx = min(
+                        new_idx = min(
                             num_slices - 1, st.session_state.mri_slice_idx + 1
                         )
+                        st.session_state.mri_slice_idx = new_idx
+                        st.session_state.pending_mri_slice_idx = new_idx
                         st.session_state.mri_play = False
                         st.rerun()
 
                     # Auto-advance if playing
                     if st.session_state.mri_play:
                         time.sleep(0.08)
-                        st.session_state.mri_slice_idx = (
-                            st.session_state.mri_slice_idx + 1
-                        ) % num_slices
+                        new_idx = (st.session_state.mri_slice_idx + 1) % num_slices
+                        st.session_state.mri_slice_idx = new_idx
+                        st.session_state.pending_mri_slice_idx = new_idx
                         st.rerun()
                 except Exception as e:
                     st.error(f"Could not load MRI file: {e}")
